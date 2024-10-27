@@ -98,8 +98,8 @@ namespace HerokuAppAutomation
             string fileUpload = @"C:\Users\HP\Downloads\sample1.jpg";
             chooseFileBtn.SendKeys(fileUpload);
 
-            var uploadBtn = driver.FindElement(By.CssSelector("input#file-upload"));
-            //uploadBtn.Click();
+            var uploadBtn = driver.FindElement(By.CssSelector("input#file-submit"));
+            uploadBtn.Click();
 
             string successMsg = driver.FindElement(By.CssSelector("h3")).Text;
             Assert.That(successMsg, Is.EqualTo("File Uploaded!"));
