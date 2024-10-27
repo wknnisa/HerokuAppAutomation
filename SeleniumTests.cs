@@ -1,7 +1,6 @@
 ﻿using NUnit.Framework; // Make sure NUnit is installed
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Support.UI;
 
 namespace HerokuAppAutomation
 {
@@ -14,8 +13,6 @@ namespace HerokuAppAutomation
         public void Setup()
         {
             driver = new ChromeDriver(@"C:\WebDrivers\"); // Update with your path
-            //driver.Manage().Window.Maximize();
-            //wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10)); // Use explicit wait
         }
 
         [Test]
@@ -54,7 +51,7 @@ namespace HerokuAppAutomation
             
             // find by id
             var usernameTxtField = driver.FindElement(By.Id("username"));
-            //enter username
+            // enter username
             usernameTxtField.SendKeys("tomsmith");
 
             var passwordTxtField = driver.FindElement(By.Id("password"));
@@ -75,22 +72,37 @@ namespace HerokuAppAutomation
         {
             driver!.Navigate().GoToUrl("https://the-internet.herokuapp.com/login");
 
+            // Direct Interaction than using variable
             driver!.FindElement(By.Id("username")).SendKeys("test");
             driver!.FindElement(By.Id("password")).SendKeys("test");
 
-            driver!.FindElement(By.XPath("//button[@type='submit']"));
+            driver!.FindElement(By.XPath("//button[@type='submit']")).Click();
 
-            // Find the element and then get its text
-            string errorMsg = driver.FindElement(By.CssSelector("div#flash.flash.error")).Text;
-
-            // Wait for the error message to be visible
-            //IWebElement errorMessageElement = wait.Until(d => d.FindElement(By.CssSelector("div.flash.error")));
-
-            // Get the text of the error message
-            //string errorMsg = errorMessageElement.Text;
+            // Find the element and then get its text using class and id
+            string errorMsg = driver.FindElement(By.CssSelector("div#flash.flash.error")).Text; 
+            // (By.CssSelector("#flash") - faster execution but there could be non-unique id
 
             // Check that an error message is displayed
             Assert.That(errorMsg, Does.Contain("Your username is invalid!"));
+        }
+
+        [Test]
+        public void FileUpload() 
+        {
+            driver!.Navigate().GoToUrl("https://the-internet.herokuapp.com/upload");
+
+            //var chooseFileBtn = driver.FindElement(By.Id("file-upload"));
+            var chooseFileBtn = driver.FindElement(By.CssSelector("input[type='file'][id='file-upload'][name='file']"));
+            //chooseFileBtn.Click();
+
+            string fileUpload = @"C:\Users\HP\Downloads\sample1.jpg";
+            chooseFileBtn.SendKeys(fileUpload);
+
+            var uploadBtn = driver.FindElement(By.CssSelector("input#file-upload"));
+            //uploadBtn.Click();
+
+            string successMsg = driver.FindElement(By.CssSelector("h3")).Text;
+            Assert.That(successMsg, Is.EqualTo("File Uploaded!"));
         }
 
         [TearDown] // Runs after each test
