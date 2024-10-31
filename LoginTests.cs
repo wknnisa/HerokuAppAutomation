@@ -25,6 +25,10 @@ namespace HerokuAppAutomation
 
             // Valid Login
             PerformLogin(username, password);
+            Assert.That(driver.Url, Is.EqualTo("https://the-internet.herokuapp.com/secure"));
+
+            PerformLogin("TomSmith", password);
+            Assert.That(driver.Url, Is.Not.EqualTo("https://the-internet.herokuapp.com/secure"));
         }
 
         private void PerformLogin(string username, string password) 
