@@ -11,8 +11,8 @@ namespace HerokuAppAutomation
         private IWebDriver? driver;
 
         // Enum for browser types
-        public enum BrowserType 
-        { 
+        public enum BrowserType
+        {
             Chrome, Firefox, Edge
         }
 
@@ -21,18 +21,12 @@ namespace HerokuAppAutomation
         private const string SecureUrl = "https://the-internet.herokuapp.com/secure";
         private const string HomeUrl = "https://the-internet.herokuapp.com/";
 
-        [SetUp]
-        public void Setup()
-        {
-
-        }
-
-        // Test case that receives the browser type
+        // Test case that receives the browser type for successful login
         [Test]
         [TestCase(BrowserType.Chrome)]
         [TestCase(BrowserType.Firefox)]
         [TestCase(BrowserType.Edge)]
-        public void SuccessfulLogin(BrowserType browserType)
+        public void LoginSuccess(BrowserType browserType)
         {
             SetupBrowser(browserType); // Initialize browser based on test case
 
@@ -50,23 +44,63 @@ namespace HerokuAppAutomation
             NavigateToLogin();
 
             // Case Sensitive Check for Username
-            PerformLogin("TomSmith", password); // Different case for username
+            PerformLogin("TomSmith", password); // Test with incorrect case for the username
             Assert.That(driver.Url, Is.Not.EqualTo(SecureUrl)); // Should not log in
 
             // Navigate back to the login page again for password check
             NavigateToLogin();
 
             // Case Sensitive Check for Password
-            PerformLogin(username, "supersecretpassword!"); // Different case for password
+            PerformLogin(username, "supersecretpassword!"); // Test with incorrect case for the password
             Assert.That(driver.Url, Is.Not.EqualTo(SecureUrl)); // Should not log in
 
-            // Session Persistence Test
+            // Session Persistence Test (user should still be logged in)
             driver!.Navigate().GoToUrl(HomeUrl);
             Assert.That(driver.Url, Is.EqualTo(HomeUrl)); // Should be on home page
 
             // Navigate back to secure page
             driver!.Navigate().GoToUrl(SecureUrl);
             Assert.That(driver.Url, Is.EqualTo(SecureUrl)); // Should still be logged in
+
+            CleanUp(); // Close browser
+        }
+
+        // Test case for unsuccessful login (wrong username)
+        [Test]
+        [TestCase(BrowserType.Chrome)]
+        [TestCase(BrowserType.Firefox)]
+        [TestCase(BrowserType.Edge)]
+        public void LoginFailsWithInvalidUsername(BrowserType browserType)
+        {
+            SetupBrowser(browserType);
+
+            NavigateToLogin();
+
+            PerformLogin("test", "SuperSecretPassword!");
+
+            var errorMsg = driver!.FindElement(By.CssSelector("div#flash.flash.error"));
+            Assert.That(errorMsg.Displayed, Is.True);
+            Assert.That(errorMsg.Text, Does.Contain("Your username is invalid!"));
+
+            CleanUp();
+        }
+
+        // Test case for unsuccessful login (wrong password)
+        [Test]
+        [TestCase(BrowserType.Chrome)]
+        [TestCase(BrowserType.Firefox)]
+        [TestCase(BrowserType.Edge)]
+        public void LoginFailsWithInvalidPassword(BrowserType browserType)
+        {
+            SetupBrowser(browserType);
+
+            NavigateToLogin();
+
+            PerformLogin("tomsmith", "test");
+
+            var errorMsg = driver!.FindElement(By.CssSelector("div#flash.flash.error"));
+            Assert.That(errorMsg.Displayed, Is.True);
+            Assert.That(errorMsg.Text, Does.Contain("Your password is invalid!"));
 
             CleanUp();
         }
@@ -82,7 +116,6 @@ namespace HerokuAppAutomation
             // Common options for all browsers
             chromeOptions.AddArgument("--disable-gpu"); // Disable GPU acceleration for Chrome
             chromeOptions.AddArgument("--start-maximixed"); // Start maximized for Chrome
-
             firefoxOptions.AddArgument("--start-maximized"); // Start maximized for Firefox
             edgeOptions.AddArgument("--start-maximized"); // Start maximized for Edge
 
