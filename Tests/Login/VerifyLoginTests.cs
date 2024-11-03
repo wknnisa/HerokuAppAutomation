@@ -4,9 +4,9 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Edge;
 
-namespace HerokuAppAutomation
+namespace HerokuAppAutomation.Tests.Login
 {
-    public class LoginTests
+    public class VerifyLoginTests
     {
         private IWebDriver? driver;
 
@@ -137,7 +137,7 @@ namespace HerokuAppAutomation
         }
 
         // Helper method for logging in
-        private void PerformLogin(string username, string password) 
+        private void PerformLogin(string username, string password)
         {
             driver!.FindElement(By.Id("username")).Clear();
             driver!.FindElement(By.Id("username")).SendKeys(username);
@@ -154,8 +154,8 @@ namespace HerokuAppAutomation
 
         // Cleanup method to close the browser after each test
         [TearDown]
-        public void CleanUp() 
-        { 
+        public void CleanUp()
+        {
             driver!.Quit();
         }
     }

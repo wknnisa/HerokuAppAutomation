@@ -2,9 +2,9 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 
-namespace HerokuAppAutomation
+namespace HerokuAppAutomation.Tests.AddRemoveElements
 {
-    public class AddRemoveElementsTest
+    public class VerifyAddRemoveElementsTest
     {
         private IWebDriver? driver;
 

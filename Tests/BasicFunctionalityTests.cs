@@ -2,7 +2,7 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 
-namespace HerokuAppAutomation
+namespace HerokuAppAutomation.Tests
 {
     public class SeleniumTests
     {
@@ -45,10 +45,10 @@ namespace HerokuAppAutomation
         }
 
         [Test]
-        public void SuccessfulLogin() 
+        public void SuccessfulLogin()
         {
             driver!.Navigate().GoToUrl("https://the-internet.herokuapp.com/login");
-            
+
             // find by id
             var usernameTxtField = driver.FindElement(By.Id("username"));
             // enter username
@@ -79,7 +79,7 @@ namespace HerokuAppAutomation
             driver!.FindElement(By.XPath("//button[@type='submit']")).Click();
 
             // Find the element and then get its text using class and id
-            string errorMsg = driver.FindElement(By.CssSelector("div#flash.flash.error")).Text; 
+            string errorMsg = driver.FindElement(By.CssSelector("div#flash.flash.error")).Text;
             // (By.CssSelector("#flash") - faster execution but there could be non-unique id
 
             // Check that an error message is displayed
@@ -87,7 +87,7 @@ namespace HerokuAppAutomation
         }
 
         [Test]
-        public void FileUpload() 
+        public void FileUpload()
         {
             driver!.Navigate().GoToUrl("https://the-internet.herokuapp.com/upload");
 

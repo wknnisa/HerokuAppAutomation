@@ -4,9 +4,9 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Edge;
 
-namespace HerokuAppAutomation
+namespace HerokuAppAutomation.Tests.HomePage
 {
-    public class CrossBrowserTests
+    public class VerifyHomePageTitleTest
     {
         private IWebDriver? driver;
 
@@ -18,7 +18,7 @@ namespace HerokuAppAutomation
         [SetUp]
         public void Setup()
         {
-            
+
         }
 
         // Test case for each browser
@@ -46,11 +46,11 @@ namespace HerokuAppAutomation
 
             driver!.Navigate().GoToUrl("https://the-internet.herokuapp.com");
             Assert.That(driver.Title, Is.EqualTo("The Internet"));
-        }   
+        }
 
         [TearDown]
-        public void Cleanup() 
-        { 
+        public void Cleanup()
+        {
             driver?.Quit();
         }
     }
