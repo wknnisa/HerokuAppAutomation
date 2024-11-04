@@ -16,7 +16,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
         }
 
         private const string UploadUrl = "https://the-internet.herokuapp.com/upload";
-        private const string FilePath = @"C:\Users\HP\Downloads\sample1.jpg";
+        private const string FileDirectory = @"C:\TestFiles\";
 
         [SetUp]
         public void Setup()
@@ -34,7 +34,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
-            string validFilePath = Path.Combine(FilePath, "sample1.jpg");
+            string validFilePath = Path.Combine(FileDirectory, "sample1.jpg");
             UploadFile(validFilePath);
 
             IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
@@ -53,7 +53,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
-            string largeFilePath = Path.Combine(FilePath, "sublime_text_build_4126_x64_setup.exe");
+            string largeFilePath = Path.Combine(FileDirectory, "sublime_text_build_4126_x64_setup.exe");
             UploadFile(largeFilePath);
 
             IWebElement errorMessage = driver.FindElement(By.Id("error-message"));
@@ -68,7 +68,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
             fileInput.SendKeys(filePath);
 
             IWebElement submitButton = driver!.FindElement(By.Id("file-submit"));
-            fileInput.Click();
+            submitButton.Click();
         }
 
         private void SetupBrowser(BrowserType browserType)
