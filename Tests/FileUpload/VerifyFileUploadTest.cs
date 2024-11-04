@@ -15,10 +15,60 @@ namespace HerokuAppAutomation.Tests.FileUpload
             Chrome, Firefox, Edge
         }
 
+        private const string UploadUrl = "https://the-internet.herokuapp.com/upload";
+        private const string FilePath = @"C:\Users\HP\Downloads\sample1.jpg";
+
         [SetUp]
         public void Setup()
         {
-            driver = new ChromeDriver(@"C:\WebDrivers\");
+
+        }
+
+        [Test]
+        [TestCase(BrowserType.Chrome)]
+        [TestCase(BrowserType.Firefox)]
+        [TestCase(BrowserType.Edge)]
+        public void FileUploadValidFile(BrowserType browserType)
+        {
+            SetupBrowser(browserType);
+
+            driver!.Navigate().GoToUrl(UploadUrl);
+
+            string validFilePath = Path.Combine(FilePath, "sample1.jpg");
+            UploadFile(validFilePath);
+
+            IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
+            Assert.That(uploadedMessage.Text, Is.EqualTo("sample1.jpg"));
+
+            CleanUp();
+        }
+
+        [Test]
+        [TestCase(BrowserType.Chrome)]
+        [TestCase(BrowserType.Firefox)]
+        [TestCase(BrowserType.Edge)]
+        public void FileUploadSizeLimit(BrowserType browserType)
+        {
+            SetupBrowser(browserType);
+
+            driver!.Navigate().GoToUrl(UploadUrl);
+
+            string largeFilePath = Path.Combine(FilePath, "sublime_text_build_4126_x64_setup.exe");
+            UploadFile(largeFilePath);
+
+            IWebElement errorMessage = driver.FindElement(By.Id("error-message"));
+            Assert.That(errorMessage.Text, Does.Contain("File size limit is exceeded"));
+
+            CleanUp();
+        }
+
+        public void UploadFile(string filePath)
+        {
+            IWebElement fileInput = driver!.FindElement(By.Id("file-upload"));
+            fileInput.SendKeys(filePath);
+
+            IWebElement submitButton = driver!.FindElement(By.Id("file-submit"));
+            fileInput.Click();
         }
 
         private void SetupBrowser(BrowserType browserType)
@@ -27,6 +77,11 @@ namespace HerokuAppAutomation.Tests.FileUpload
             ChromeOptions chromeOptions = new ChromeOptions();
             FirefoxOptions firefoxOptions = new FirefoxOptions();
             EdgeOptions edgeOptions = new EdgeOptions();
+
+            chromeOptions.AddArgument("--disable-gpu");
+            chromeOptions.AddArgument("--start-maximized");
+            firefoxOptions.AddArgument("--start-maximized");
+            edgeOptions.AddArgument("--start-maximized");
 
             switch (browserType)
             {
