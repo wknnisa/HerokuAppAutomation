@@ -23,7 +23,8 @@ namespace HerokuAppAutomation.Tests.FileUpload
             Path.Combine(FileDirectory, "1mb.jpg"),
             Path.Combine(FileDirectory, "5mb.jpg"),
             Path.Combine(FileDirectory, "10mb.jpg"),
-            Path.Combine(FileDirectory, "50mb.jpg")
+            Path.Combine(FileDirectory, "50mb.jpg"),
+            Path.Combine(FileDirectory, "100mb.jpg")
         };
 
         [SetUp]
@@ -47,14 +48,20 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 FileInfo fileInfo = new FileInfo(filePath);
                 TestContext.WriteLine($"Testing file: {fileInfo.Name}, Size: {fileInfo.Length / (1024 * 1024)} MB");
 
+                // Perform the file upload
                 UploadFile(filePath);
 
+                // Wait for the upload completion (use an explicit wait here if necessary)
                 try
                 {
                     IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
                     TestContext.WriteLine($"Successfully uploaded: {fileInfo.Name}");
+
+                    // Resetting for the next test
+                    driver.Navigate().GoToUrl(UploadUrl);
                 }
-                catch (NoSuchElementException) {
+                catch (NoSuchElementException) 
+                {
                     TestContext.WriteLine($"Upload failed for file: {fileInfo.Name}");
                     Assert.Fail($"File size too large or upload failed for {fileInfo.Name}");
                 }
@@ -115,7 +122,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
         private void SetupBrowser(BrowserType browserType)
         {
-
+            // Declare browser options
             ChromeOptions chromeOptions = new ChromeOptions();
             FirefoxOptions firefoxOptions = new FirefoxOptions();
             EdgeOptions edgeOptions = new EdgeOptions();
@@ -125,6 +132,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
             firefoxOptions.AddArgument("--start-maximized");
             edgeOptions.AddArgument("--start-maximized");
 
+            // Initialize the driver based on the selected browser
             switch (browserType)
             {
                 case BrowserType.Chrome:
@@ -140,6 +148,11 @@ namespace HerokuAppAutomation.Tests.FileUpload
                     throw new ArgumentException("Unsupported Browser");
 
             }
+
+            // Set timeout values
+            driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3); // Increase page load timeout to 3 minutes
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30); // Increase implicit wait to 30 seconds
+            driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Increase script timeout
         }
 
         [TearDown]
