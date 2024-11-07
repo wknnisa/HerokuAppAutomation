@@ -18,10 +18,51 @@ namespace HerokuAppAutomation.Tests.FileUpload
         private const string UploadUrl = "https://the-internet.herokuapp.com/upload";
         private const string FileDirectory = @"C:\TestFiles\";
 
+        string[] filePaths =
+        {
+            Path.Combine(FileDirectory, "1mb.jpg"),
+            Path.Combine(FileDirectory, "5mb.jpg"),
+            Path.Combine(FileDirectory, "10mb.jpg"),
+            Path.Combine(FileDirectory, "50mb.jpg")
+        };
+
         [SetUp]
         public void Setup()
         {
 
+        }
+
+        [Test]
+        [TestCase(BrowserType.Chrome)]
+        [TestCase(BrowserType.Firefox)]
+        [TestCase(BrowserType.Edge)]
+        public void FileUploadVariousSizes (BrowserType browserType)
+        {
+            SetupBrowser(browserType);
+
+            driver!.Navigate().GoToUrl(UploadUrl);
+
+            foreach (string filePath in filePaths)
+            {
+                FileInfo fileInfo = new FileInfo(filePath);
+                TestContext.WriteLine($"Testing file: {fileInfo.Name}, Size: {fileInfo.Length / (1024 * 1024)} MB");
+
+                UploadFile(filePath);
+
+                try
+                {
+                    IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
+                    TestContext.WriteLine($"Successfully uploaded: {fileInfo.Name}");
+                }
+                catch (NoSuchElementException) {
+                    TestContext.WriteLine($"Upload failed for file: {fileInfo.Name}");
+                    Assert.Fail($"File size too large or upload failed for {fileInfo.Name}");
+                }
+
+                driver!.Navigate ().GoToUrl(UploadUrl);
+            }
+
+            CleanUp();
         }
 
         [Test]
@@ -53,7 +94,8 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
-            string largeFilePath = Path.Combine(FileDirectory, "sublime_text_build_4126_x64_setup.exe");
+            // Path.Combine - combining the directory path and the file name.
+            string largeFilePath = Path.Combine(FileDirectory, "sublime_text_build_4126_x64_setup.exe"); 
             UploadFile(largeFilePath);
 
             IWebElement errorMessage = driver.FindElement(By.Id("error-message"));
