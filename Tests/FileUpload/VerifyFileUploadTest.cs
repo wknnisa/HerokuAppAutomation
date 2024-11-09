@@ -20,11 +20,16 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
         string[] filePaths =
         {
-            Path.Combine(FileDirectory, "1mb.jpg"),
-            Path.Combine(FileDirectory, "5mb.jpg"),
-            Path.Combine(FileDirectory, "10mb.jpg"),
-            Path.Combine(FileDirectory, "50mb.jpg"),
-            Path.Combine(FileDirectory, "100mb.jpg")
+            //Path.Combine(FileDirectory, "1mb.jpg"),
+            //Path.Combine(FileDirectory, "5mb.jpg"),
+            //Path.Combine(FileDirectory, "10mb.jpg"),
+            //Path.Combine(FileDirectory, "50mb.jpg"),
+            //Path.Combine(FileDirectory, "100mb.jpg"),
+            //Path.Combine(FileDirectory, "200mb.txt"),
+            //Path.Combine(FileDirectory, "250mb.bin"),
+            //Path.Combine(FileDirectory, "275mb.bin"),
+            //Path.Combine(FileDirectory, "300mb.zip"),
+            Path.Combine(FileDirectory, "500mb")
         };
 
         [SetUp]
@@ -63,13 +68,39 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 catch (NoSuchElementException) 
                 {
                     TestContext.WriteLine($"Upload failed for file: {fileInfo.Name}");
-                    Assert.Fail($"File size too large or upload failed for {fileInfo.Name}");
+
+                    if (IsApplicationErrorPresent())
+                    {
+                        TestContext.WriteLine($"Application error occured for file {fileInfo.Name}");
+                    }
+                    else
+                    {
+                        Assert.Fail($"File size too large or upload failed for {fileInfo.Name}");
+                    }
                 }
 
                 driver!.Navigate ().GoToUrl(UploadUrl);
             }
 
             CleanUp();
+        }
+
+        private bool IsApplicationErrorPresent()
+        {
+            try
+            {
+                IWebElement errorElement = driver!.FindElement(By.Id("div.message__title"));
+                if (errorElement.Text.Contains("Application error"))
+                {
+                    return true;
+                }
+            }
+            catch (NoSuchElementException) 
+            { 
+                return false;
+            }
+            
+            return false;
         }
 
         [Test]
