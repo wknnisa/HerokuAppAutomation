@@ -44,7 +44,9 @@ namespace HerokuAppAutomation.Tests.FileUpload
         [TestCase(BrowserType.Edge)]
         public void FileUploadVariousSizes (BrowserType browserType)
         {
-            SetupBrowser(browserType);
+            bool isLargeFile = IsLargeFilePresent();
+
+            SetupBrowser(browserType, isLargeFile);
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
@@ -59,11 +61,17 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 // Wait for the upload completion (use an explicit wait here if necessary)
                 try
                 {
-                    IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
-                    TestContext.WriteLine($"Successfully uploaded: {fileInfo.Name}");
+                    if (fileInfo.Length > (500 * 1024 * 1024)) 
+                    {
+                        TestContext.WriteLine($"Skipping file {fileInfo.Name} as it exceeds the size limit.");
+                        continue;
+                    }
 
-                    // Resetting for the next test
-                    driver.Navigate().GoToUrl(UploadUrl);
+                    UploadFile(filePath);
+
+                    WaitForUploadCompletion(TimeSpan.FromMinutes(isLargeFile ? 5 : 2));
+
+
                 }
                 catch (NoSuchElementException) 
                 {
@@ -85,22 +93,28 @@ namespace HerokuAppAutomation.Tests.FileUpload
             CleanUp();
         }
 
+        private void WaitForUploadCompletion(TimeSpan timeSpan)
+        {
+            throw new NotImplementedException();
+        }
+
+        private bool IsLargeFilePresent()
+        {
+            throw new NotImplementedException();
+        }
+
         private bool IsApplicationErrorPresent()
         {
             try
             {
-                IWebElement errorElement = driver!.FindElement(By.Id("div.message__title"));
-                if (errorElement.Text.Contains("Application error"))
-                {
-                    return true;
-                }
+                IWebElement errorElement = driver!.FindElement(By.XPath("//body[contains(text(), 'Application error')]"));
+                return errorElement.Displayed;
             }
             catch (NoSuchElementException) 
             { 
                 return false;
             }
             
-            return false;
         }
 
         [Test]
