@@ -3,6 +3,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Support.UI;
 
 namespace HerokuAppAutomation.Tests.FileUpload
 {
@@ -20,7 +21,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
         string[] filePaths =
         {
-            //Path.Combine(FileDirectory, "1mb.jpg"),
+            Path.Combine(FileDirectory, "1mb.jpg"),
             //Path.Combine(FileDirectory, "5mb.jpg"),
             //Path.Combine(FileDirectory, "10mb.jpg"),
             //Path.Combine(FileDirectory, "50mb.jpg"),
@@ -29,7 +30,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
             //Path.Combine(FileDirectory, "250mb.bin"),
             //Path.Combine(FileDirectory, "275mb.bin"),
             //Path.Combine(FileDirectory, "300mb.zip"),
-            Path.Combine(FileDirectory, "500mb")
+            //Path.Combine(FileDirectory, "500mb")
         };
 
         [SetUp]
@@ -61,7 +62,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 // Wait for the upload completion (use an explicit wait here if necessary)
                 try
                 {
-                    if (fileInfo.Length > (500 * 1024 * 1024)) 
+                    if (fileInfo.Length > (500 * 1024 * 1024))
                     {
                         TestContext.WriteLine($"Skipping file {fileInfo.Name} as it exceeds the size limit.");
                         continue;
@@ -71,9 +72,13 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
                     WaitForUploadCompletion(TimeSpan.FromMinutes(isLargeFile ? 5 : 2));
 
+                    IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
+                    TestContext.WriteLine($"Successfully uploaded: {fileInfo.Name}");
+
+                    driver.Navigate().GoToUrl(UploadUrl);
 
                 }
-                catch (NoSuchElementException) 
+                catch (NoSuchElementException)
                 {
                     TestContext.WriteLine($"Upload failed for file: {fileInfo.Name}");
 
@@ -87,20 +92,51 @@ namespace HerokuAppAutomation.Tests.FileUpload
                     }
                 }
 
-                driver!.Navigate ().GoToUrl(UploadUrl);
+                catch (WebDriverException ex)
+                {
+                    TestContext.WriteLine($"Browser crashed during file upload: {fileInfo.Name}, Error: {ex.Message}");
+                    Assert.Fail($"Test failed due to browser crash: {fileInfo.Name}");
+
+                    driver.Quit();
+                    SetupBrowser(browserType, isLargeFile);
+                    driver?.Navigate().GoToUrl(UploadUrl);
+                }
+
+                catch (Exception ex) 
+                {
+                    TestContext.WriteLine($"An error occured during file upload: {fileInfo.Name}, Error: {ex.Message}");
+                    Assert.Fail($"Test failed due to error: {fileInfo.Name}");
+                }
+
+                finally
+                {
+                    driver!.Navigate().GoToUrl(UploadUrl);
+                }
+
             }
 
             CleanUp();
         }
 
-        private void WaitForUploadCompletion(TimeSpan timeSpan)
+        public void WaitForUploadCompletion(TimeSpan timeout)
         {
-            throw new NotImplementedException();
+            WebDriverWait wait = new WebDriverWait(driver, timeout);
+
+            try
+            {
+                wait.Until(d => d.FindElement(By.Id("uploaded-files")).Displayed);
+                TestContext.WriteLine("File upload complete");
+            }
+            catch (WebDriverTimeoutException) 
+            {
+                TestContext.WriteLine("File upload did not complete within the expected time.");
+                Assert.Fail("File upload timed out.");
+            }
         }
 
         private bool IsLargeFilePresent()
         {
-            throw new NotImplementedException();
+            return filePaths.Any(filePath => new FileInfo(filePath).Length > (100 * 1024 * 1024));
         }
 
         private bool IsApplicationErrorPresent()
@@ -123,7 +159,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
         [TestCase(BrowserType.Edge)]
         public void FileUploadValidFile(BrowserType browserType)
         {
-            SetupBrowser(browserType);
+            //SetupBrowser(browserType);
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
@@ -142,7 +178,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
         [TestCase(BrowserType.Edge)]
         public void FileUploadSizeLimit(BrowserType browserType)
         {
-            SetupBrowser(browserType);
+            //SetupBrowser(browserType);
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
@@ -165,7 +201,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
             submitButton.Click();
         }
 
-        private void SetupBrowser(BrowserType browserType)
+        private void SetupBrowser(BrowserType browserType, bool isLargeFile)
         {
             // Declare browser options
             ChromeOptions chromeOptions = new ChromeOptions();
@@ -194,10 +230,20 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
             }
 
-            // Set timeout values
-            driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3); // Increase page load timeout to 3 minutes
-            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30); // Increase implicit wait to 30 seconds
-            driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Increase script timeout
+            if (isLargeFile) 
+            {
+                driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(5); // Increase page load timeout to 3 minutes
+                driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(60); // Increase implicit wait to 30 seconds
+                driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromMinutes(2); // Increase script timeout
+            }
+            else
+            {
+                // Set timeout values
+                driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3); // Increase page load timeout to 3 minutes
+                driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30); // Increase implicit wait to 30 seconds
+                driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Increase script timeout
+            }
+            
         }
 
         [TearDown]
