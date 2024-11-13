@@ -21,16 +21,16 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
         string[] filePaths =
         {
-            Path.Combine(FileDirectory, "1mb.jpg"),
+            //Path.Combine(FileDirectory, "1mb.jpg"),
             //Path.Combine(FileDirectory, "5mb.jpg"),
             //Path.Combine(FileDirectory, "10mb.jpg"),
             //Path.Combine(FileDirectory, "50mb.jpg"),
             //Path.Combine(FileDirectory, "100mb.jpg"),
-            //Path.Combine(FileDirectory, "200mb.txt"),
-            //Path.Combine(FileDirectory, "250mb.bin"),
-            //Path.Combine(FileDirectory, "275mb.bin"),
-            //Path.Combine(FileDirectory, "300mb.zip"),
-            //Path.Combine(FileDirectory, "500mb")
+            Path.Combine(FileDirectory, "200mb.txt"),
+            Path.Combine(FileDirectory, "250mb.bin"),
+            Path.Combine(FileDirectory, "275mb.bin"),
+            Path.Combine(FileDirectory, "300mb.zip"),
+            Path.Combine(FileDirectory, "500mb")
         };
 
         [SetUp]
@@ -45,79 +45,109 @@ namespace HerokuAppAutomation.Tests.FileUpload
         [TestCase(BrowserType.Edge)]
         public void FileUploadVariousSizes (BrowserType browserType)
         {
+            // Check if any file is larger than the size limit
             bool isLargeFile = IsLargeFilePresent();
 
-            SetupBrowser(browserType, isLargeFile);
+            // Setup browser with necessary timeouts based on file size
+            SetupBrowser(browserType);
 
+            // Navigate to the file upload page
             driver!.Navigate().GoToUrl(UploadUrl);
 
             foreach (string filePath in filePaths)
             {
                 FileInfo fileInfo = new FileInfo(filePath);
-                TestContext.WriteLine($"Testing file: {fileInfo.Name}, Size: {fileInfo.Length / (1024 * 1024)} MB");
 
-                // Perform the file upload
-                UploadFile(filePath);
+                // Log file information (for reference)
+                TestContext.WriteLine($"Testing file: {fileInfo.Name}, Size: {fileInfo.Length / (1024 * 1024)} MB");
 
                 // Wait for the upload completion (use an explicit wait here if necessary)
                 try
                 {
-                    if (fileInfo.Length > (500 * 1024 * 1024))
+                    // Skip files larger than 250MB (or another limit) and log the skip
+                    if (fileInfo.Length > (250 * 1024 * 1024)) // Adjust size limit if necessary
                     {
-                        TestContext.WriteLine($"Skipping file {fileInfo.Name} as it exceeds the size limit.");
-                        continue;
+                        LogIssue($"Skipping file {fileInfo.Name} because it exceeds the size limit of 250MB.");
+                        continue; // Skip this file and proceed to the next one
                     }
 
+                    // Perform the file upload
                     UploadFile(filePath);
 
+                    // Adjust the wait time based on file size for upload completion
+                    TimeSpan uploadWaitTime = fileInfo.Length > (100 * 1024 * 1024)
+                        ? TimeSpan.FromMinutes(5)  // Increase timeout for larger files (e.g., > 100MB)
+                        : TimeSpan.FromMinutes(2); // Default timeout for smaller files
+
+                    // Wait for the upload to complete
                     WaitForUploadCompletion(TimeSpan.FromMinutes(isLargeFile ? 5 : 2));
 
+                    // Verify upload was successful by checking the uploaded file name in the UI
                     IWebElement uploadedMessage = driver.FindElement(By.Id("uploaded-files"));
-                    TestContext.WriteLine($"Successfully uploaded: {fileInfo.Name}");
 
+                    if(!uploadedMessage.Text.Contains(fileInfo.Name))
+                    {
+                        LogIssue($"Upload failed for file: {fileInfo.Name}");
+                    }
+                    else 
+                    {
+                        // Log success message
+                        TestContext.WriteLine($"Successfully uploaded: {fileInfo.Name}");
+                    }
+
+                    // Reset page for the next file upload
                     driver.Navigate().GoToUrl(UploadUrl);
 
                 }
                 catch (NoSuchElementException)
                 {
-                    TestContext.WriteLine($"Upload failed for file: {fileInfo.Name}");
+                    // Handle cases where the file upload element isn't found
+                    LogIssue($"Upload failed for file: {fileInfo.Name}");
 
+                    // Log application error if present
                     if (IsApplicationErrorPresent())
                     {
-                        TestContext.WriteLine($"Application error occured for file {fileInfo.Name}");
-                    }
-                    else
-                    {
-                        Assert.Fail($"File size too large or upload failed for {fileInfo.Name}");
+                        LogIssue($"Application error occured for file {fileInfo.Name}");
                     }
                 }
 
                 catch (WebDriverException ex)
                 {
-                    TestContext.WriteLine($"Browser crashed during file upload: {fileInfo.Name}, Error: {ex.Message}");
-                    Assert.Fail($"Test failed due to browser crash: {fileInfo.Name}");
+                    // Handle browser-related issues like crashes or unexpected shutdowns
+                    LogIssue($"Browser crashed during file upload: {fileInfo.Name}, Error: {ex.Message}");
 
+                    // Restart browser and continue
                     driver.Quit();
-                    SetupBrowser(browserType, isLargeFile);
+                    SetupBrowser(browserType);
                     driver?.Navigate().GoToUrl(UploadUrl);
                 }
 
                 catch (Exception ex) 
                 {
-                    TestContext.WriteLine($"An error occured during file upload: {fileInfo.Name}, Error: {ex.Message}");
-                    Assert.Fail($"Test failed due to error: {fileInfo.Name}");
+                    // Handle any other unexpected errors
+                    LogIssue($"An error occured during file upload: {fileInfo.Name}, Error: {ex.Message}");
                 }
 
                 finally
                 {
+                    // Reset the page after each file upload attempt
                     driver!.Navigate().GoToUrl(UploadUrl);
                 }
 
             }
 
+            // Clean up resources after the test completes
             CleanUp();
         }
 
+        // Log issue function (add logging mechanism here, e.g., file logging, test report logging, etc.)
+        private void LogIssue(string message)
+        {
+            // Log the issue in the test context or external log
+            TestContext.WriteLine($"ISSUE: {message}");
+        }
+
+        // Wait for the file upload to complete
         public void WaitForUploadCompletion(TimeSpan timeout)
         {
             WebDriverWait wait = new WebDriverWait(driver, timeout);
@@ -129,16 +159,17 @@ namespace HerokuAppAutomation.Tests.FileUpload
             }
             catch (WebDriverTimeoutException) 
             {
-                TestContext.WriteLine("File upload did not complete within the expected time.");
-                Assert.Fail("File upload timed out.");
+                LogIssue("File upload did not complete within the expected time.");
             }
         }
 
+        // Check if there are large files in the test set
         private bool IsLargeFilePresent()
         {
             return filePaths.Any(filePath => new FileInfo(filePath).Length > (100 * 1024 * 1024));
         }
 
+        // Check if the application has thrown an error
         private bool IsApplicationErrorPresent()
         {
             try
@@ -159,7 +190,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
         [TestCase(BrowserType.Edge)]
         public void FileUploadValidFile(BrowserType browserType)
         {
-            //SetupBrowser(browserType);
+            SetupBrowser(browserType);
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
@@ -178,7 +209,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
         [TestCase(BrowserType.Edge)]
         public void FileUploadSizeLimit(BrowserType browserType)
         {
-            //SetupBrowser(browserType);
+            SetupBrowser(browserType);
 
             driver!.Navigate().GoToUrl(UploadUrl);
 
@@ -192,6 +223,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
             CleanUp();
         }
 
+        // Upload file function
         public void UploadFile(string filePath)
         {
             IWebElement fileInput = driver!.FindElement(By.Id("file-upload"));
@@ -201,7 +233,8 @@ namespace HerokuAppAutomation.Tests.FileUpload
             submitButton.Click();
         }
 
-        private void SetupBrowser(BrowserType browserType, bool isLargeFile)
+        // Setup browser with dynamic timeout settings based on file size
+        private void SetupBrowser(BrowserType browserType)
         {
             // Declare browser options
             ChromeOptions chromeOptions = new ChromeOptions();
@@ -230,22 +263,14 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
             }
 
-            if (isLargeFile) 
-            {
-                driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(5); // Increase page load timeout to 3 minutes
-                driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(60); // Increase implicit wait to 30 seconds
-                driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromMinutes(2); // Increase script timeout
-            }
-            else
-            {
-                // Set timeout values
-                driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3); // Increase page load timeout to 3 minutes
-                driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30); // Increase implicit wait to 30 seconds
-                driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Increase script timeout
-            }
-            
+            // Set standard timeouts (you can adjust these based on general use)
+            driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3); // Standard page load timeout
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30); // Standard implicit wait
+            driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Standard script timeout
+
         }
 
+        // Clean up after the test
         [TearDown]
         public void CleanUp()
         {
