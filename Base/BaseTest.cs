@@ -37,7 +37,7 @@ namespace HerokuAppAutomation.Base
 
         // Tear down method to close the browser after each test
         [TearDown]
-        public void TearDown()
+        public void CleanUp()
         {
             driver?.Quit();
         }
