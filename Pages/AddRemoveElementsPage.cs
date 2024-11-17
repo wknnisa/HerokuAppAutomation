@@ -4,12 +4,16 @@ namespace HerokuAppAutomation.Pages
 {
     public class AddRemoveElementsPage
     {
-        private readonly IWebDriver? driver;
+        private readonly IWebDriver driver;
         private const string AddRemoveElementsUrl = "https://the-internet.herokuapp.com/add_remove_elements/";
 
         // Constructor
         public AddRemoveElementsPage(IWebDriver driver)
         {
+            if (driver == null)
+            {
+                throw new ArgumentNullException(nameof(driver), "Driver cannot be null.");
+            }    
             this.driver = driver;
         }
 
@@ -23,24 +27,26 @@ namespace HerokuAppAutomation.Pages
             driver!.Navigate().GoToUrl(AddRemoveElementsUrl);
         }
 
-        // Method to add an element
+        // Method to click the "Add Element" button
         public void AddElement()
         {
             driver!.FindElement(addButton).Click();
         }
 
-        // Method to get the count of "Delete" buttons
+        // Method to count the number of "Delete" buttons
         public int GetDeleteButtonCount()
         {
             return driver!.FindElements(deleteButtons).Count();
         }
 
-        // Method to delete an element
-        public void DeleteElement(int index) 
+        // Method to delete the first available button
+        public void RemoveElement() 
         { 
-            var deleteButtonsList = driver!.FindElements(deleteButtons);
-            deleteButtonsList[index].Click();
-
+            var buttons = driver!.FindElements(deleteButtons);
+            if (buttons.Count() > 0) 
+            {
+                buttons[0].Click(); // Remove the first button
+            }
         }
     }
 }
