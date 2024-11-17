@@ -6,15 +6,14 @@ using OpenQA.Selenium.Firefox;
 
 namespace HerokuAppAutomation.Base
 {
+    // Enum for browser types
+    public enum BrowserType
+    {
+        Chrome, Firefox, Edge
+    }
     public class BaseTest
     {
         protected IWebDriver? driver;
-
-        // Enum for browser types
-        public enum BrowserType
-        {
-            Chrome, Firefox, Edge
-        }
 
         // Setup method to initialize the browser based on the test case
         public void SetupBrowser(BrowserType browserType)
@@ -33,13 +32,19 @@ namespace HerokuAppAutomation.Base
                 default:
                     throw new ArgumentException("Unsupported Browser");
             }
+
+            if (driver == null)
+            {
+                throw new InvalidOperationException("Driver was not initialized correctly.");
+            }
         }
 
         // Tear down method to close the browser after each test
         [TearDown]
         public void CleanUp()
         {
-            driver?.Quit();
+            driver?.Quit(); // Close and dispose of the browser
+            driver = null;   // Reset the driver to ensure no reuse
         }
     }
 }

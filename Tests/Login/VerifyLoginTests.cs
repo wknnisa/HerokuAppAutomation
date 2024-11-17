@@ -8,14 +8,31 @@ namespace HerokuAppAutomation.Tests.Login
     public class VerifyLoginTests : BaseTest
     {
         private LoginPage? loginPage;
+        private BrowserType browserType; // Class-level declaration
 
         [SetUp]
         public void TestSetUp()
         {
-            // Initialize LoginPage after driver is set up
-            loginPage = new LoginPage(driver!);
+            // Ensure browserType is set before setup
+            if (driver == null)
+            {
+                SetupBrowser(browserType); // Use browserType set by the test method
+            }
 
-            // Navigate to the login page
+            // Initialize LoginPage after driver is set up
+            if (driver == null)
+            {
+                throw new InvalidOperationException("Driver is not initialized.");
+            }
+
+            loginPage = new LoginPage(driver);
+
+            // Validate loginPage initialization
+            if (loginPage == null)
+            {
+                throw new InvalidOperationException("LoginPage is not initialized.");
+            }
+
             loginPage.NavigateToLogin();
         }
 
@@ -30,7 +47,7 @@ namespace HerokuAppAutomation.Tests.Login
         [TestCase(BrowserType.Edge)]
         public void LoginSuccess(BrowserType browserType)
         {
-            SetupBrowser(browserType); // Initialize browser based on test case
+            this.browserType = browserType; // Assign browserType dynamically for TestSetUp to use
 
             // Perform a valid login
             loginPage!.Login("tomsmith", "SuperSecretPassword!");
@@ -51,7 +68,7 @@ namespace HerokuAppAutomation.Tests.Login
         [TestCase(BrowserType.Edge)]
         public void LoginFailsWithInvalidUsername(BrowserType browserType)
         {
-            SetupBrowser(browserType);
+            this.browserType = browserType;
 
             // Test with an invalid username
             loginPage!.Login("invalidUser", "SuperSecretPassword!");
@@ -69,11 +86,7 @@ namespace HerokuAppAutomation.Tests.Login
         [TestCase(BrowserType.Edge)]
         public void LoginFailsWithInvalidPassword(BrowserType browserType)
         {
-            SetupBrowser(browserType);
-
-            // Initialize LoginPage after driver is set up
-            loginPage = new LoginPage(driver!);
-            loginPage.NavigateToLogin();  // Navigate to the login page
+            this.browserType = browserType;
 
             // Test with an invalid password
             loginPage!.Login("tomsmith", "invalidPassword");

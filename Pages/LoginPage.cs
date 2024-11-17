@@ -10,6 +10,11 @@ namespace HerokuAppAutomation.Pages
         // Constructor
         public LoginPage(IWebDriver driver)
         {
+            if (driver == null)
+            {
+                throw new ArgumentNullException(nameof(driver), "Driver cannot be null.");
+            }
+
             this.driver = driver;
         }
 
