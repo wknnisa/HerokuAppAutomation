@@ -37,6 +37,11 @@ namespace HerokuAppAutomation.Base
             {
                 throw new InvalidOperationException("Driver was not initialized correctly.");
             }
+
+            // Set default timeouts for all browsers
+            driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3);
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30);
+            driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60);
         }
 
         // Tear down method to close the browser after each test
