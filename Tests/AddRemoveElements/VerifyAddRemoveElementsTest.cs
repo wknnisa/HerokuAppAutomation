@@ -1,7 +1,6 @@
 ﻿using HerokuAppAutomation.Base;
 using HerokuAppAutomation.Pages;
 using NUnit.Framework;
-using OpenQA.Selenium;
 
 namespace HerokuAppAutomation.Tests.AddRemoveElements
 {
@@ -42,10 +41,11 @@ namespace HerokuAppAutomation.Tests.AddRemoveElements
                 addRemoveElementsPage!.AddElement();
             }
 
+            // Verify correct number of "Delete" buttons
             int deleteButtonCount = addRemoveElementsPage!.GetDeleteButtonCount();
             Assert.That(deleteButtonCount, Is.EqualTo(elementsToAdd), $"Expected {elementsToAdd} 'Delete' buttons, but found {deleteButtonCount}");
 
-            // Second Loop: Remove elements
+            // Second Loop: Remove elements one by one
             // starts from the last "Delete" button
             for (int i = elementsToAdd - 1; i >= 0; i--)
             {
