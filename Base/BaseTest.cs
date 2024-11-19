@@ -18,7 +18,20 @@ namespace HerokuAppAutomation.Base
         // Setup method to initialize the browser based on the test case
         public void SetupBrowser(BrowserType browserType)
         {
-            switch(browserType)
+
+            // Declare browser options
+            ChromeOptions chromeOptions = new ChromeOptions();
+            FirefoxOptions firefoxOptions = new FirefoxOptions();
+            EdgeOptions edgeOptions = new EdgeOptions();
+
+            // Set common options for all browsers
+            chromeOptions.AddArgument("--disable-gpu");
+            chromeOptions.AddArgument("--start-maximized");
+            firefoxOptions.AddArgument("--start-maximized");
+            edgeOptions.AddArgument("--start-maximized");
+
+            // Initialize the driver based on the selected browser
+            switch (browserType)
             {
                 case BrowserType.Chrome:
                     driver = new ChromeDriver(@"C:\WebDrivers\");
@@ -33,15 +46,16 @@ namespace HerokuAppAutomation.Base
                     throw new ArgumentException("Unsupported Browser");
             }
 
+            // Validate that the driver was initialized
             if (driver == null)
             {
                 throw new InvalidOperationException("Driver was not initialized correctly.");
             }
 
             // Set default timeouts for all browsers
-            driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3);
-            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30);
-            driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60);
+            driver.Manage().Timeouts().PageLoad = TimeSpan.FromMinutes(3); // Page load timeout
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30); // Implicit wait
+            driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Script timeout
         }
 
         // Tear down method to close the browser after each test
