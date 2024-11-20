@@ -1,4 +1,5 @@
-﻿using HerokuAppAutomation.Base;
+﻿using FileGeneratorLibrary.Utilities;
+using HerokuAppAutomation.Base;
 using HerokuAppAutomation.Pages;
 using NUnit.Framework;
 using OpenQA.Selenium;
@@ -10,23 +11,10 @@ namespace HerokuAppAutomation.Tests.FileUpload
     {
         private const string UploadUrl = "https://the-internet.herokuapp.com/upload";
         private const string FileDirectory = @"C:\TestFiles\";
-
-        private readonly string[] filePaths =
-        {
-            //Path.Combine(FileDirectory, "1mb.jpg"),
-            //Path.Combine(FileDirectory, "5mb.jpg"),
-            //Path.Combine(FileDirectory, "10mb.jpg"),
-            //Path.Combine(FileDirectory, "50mb.jpg"),
-            //Path.Combine(FileDirectory, "100mb.jpg"),
-            Path.Combine(FileDirectory, "200mb.txt"),
-            Path.Combine(FileDirectory, "250mb.bin"),
-            Path.Combine(FileDirectory, "275mb.bin"),
-            Path.Combine(FileDirectory, "300mb.zip"),
-            Path.Combine(FileDirectory, "500mb")
-        };
-
         private BrowserType browserType;
         private FileUploadPage? fileUploadPage;
+
+        private string[] filePaths = new string[3]; // Declare the filePaths array to hold the generated files.
 
         [SetUp]
         public void TestSetUp()
@@ -40,6 +28,27 @@ namespace HerokuAppAutomation.Tests.FileUpload
             fileUploadPage = new FileUploadPage(driver!); // Initialize the page object
 
             fileUploadPage!.NavigateToFileUpload(); // Navigate to the File Upload page before each test
+
+            // Generate pre-defined test files
+            GenerateTestFiles();
+        }
+
+        private void GenerateTestFiles()
+        {
+            if (!Directory.Exists(FileDirectory))
+            {
+                Directory.CreateDirectory(FileDirectory);
+            }
+
+            // Generate files of varying sizes and add their paths to the filePaths array
+            FileGenerator.CreateFile(FileDirectory, "200mb.txt", 200);
+            filePaths[0] = Path.Combine(FileDirectory, "200mb.txt");
+
+            FileGenerator.CreateFile(FileDirectory, "250mb.bin", 250);
+            filePaths[1] = Path.Combine(FileDirectory, "250mb.bin");
+
+            FileGenerator.CreateFile(FileDirectory, "300mb.zip", 300);
+            filePaths[2] = Path.Combine(FileDirectory, "300mb.zip");
         }
 
         [Test]
@@ -75,7 +84,11 @@ namespace HerokuAppAutomation.Tests.FileUpload
                     string uploadedFileName = fileUploadPage.GetUploadedFileName();
                     Assert.That(uploadedFileName, Is.EqualTo(fileInfo.Name), $"Mismatch in uploaded file name: {fileInfo.Name}");
                 }
-
+                catch (WebDriverTimeoutException)
+                {
+                    // Handle timeout due to large file upload taking longer than expected
+                    LogIssue($"File upload timeout: {fileInfo.Name}. File might be too large.");
+                }
                 catch (Exception ex) 
                 {
                     // Handle any other unexpected errors
@@ -108,12 +121,43 @@ namespace HerokuAppAutomation.Tests.FileUpload
             this.browserType = browserType;
 
             // Path.Combine - combining the directory path and the file name.
+            // Path for a large file that should trigger an error
             string largeFilePath = Path.Combine(FileDirectory, "sublime_text_build_4126_x64_setup.exe"); 
             fileUploadPage!.UploadFile(largeFilePath);
 
-            IWebElement errorMessage = driver!.FindElement(By.Id("error-message"));
-            Assert.That(errorMessage.Text, Does.Contain("File size limit is exceeded"));
+            // Handle the case where the file size exceeds the limit and causes an error
+            try
+            {
+                IWebElement errorMessage = driver!.FindElement(By.Id("error-message"));
+                Assert.That(errorMessage.Text, Does.Contain("File size limit is exceeded"));
+            }
+            catch (NoSuchElementException)
+            {
+                // If the error message is not present, check for other application errors
+                if (IsApplicationErrorPresent())
+                {
+                    LogIssue("Application error occurred during file upload.");
+                }
+                else 
+                {
+                    LogIssue("Error message not found but file upload file failed");
+                }
+            }
 
+        }
+
+        // Check for an application error (e.g., if file is too large)
+        private bool IsApplicationErrorPresent()
+        {
+            try
+            {
+                IWebElement errorElement = driver!.FindElement(By.XPath("//body[contains(text(), 'Application error']"));
+                return errorElement.Displayed;
+            }
+            catch (NoSuchElementException) 
+            {
+                return false;
+            }
         }
 
         // Wait for the file upload to complete

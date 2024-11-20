@@ -17,4 +17,8 @@
     <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="130.0.6723.5800" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FileGeneratorLibrary\FileGeneratorLibrary.csproj" />
+  </ItemGroup>
+
 </Project>
