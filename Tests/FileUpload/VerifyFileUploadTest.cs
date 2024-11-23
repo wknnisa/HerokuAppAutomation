@@ -61,10 +61,12 @@ namespace HerokuAppAutomation.Tests.FileUpload
             // Path.Combine - combining the directory path and the file name.
             // Path for a large file that should trigger an error
             string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
-            fileUploadPage!.UploadFile(largeFilePath);
 
             try
             {
+                fileUploadPage!.UploadFile(largeFilePath);
+
+                // Wait for an error message or check for application errors
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
                 IWebElement errorMessage = wait.Until(d => d.FindElement(By.Id("error-message")));
 
@@ -73,19 +75,57 @@ namespace HerokuAppAutomation.Tests.FileUpload
             }
             catch (WebDriverTimeoutException)
             {
-                // If the error message is not present, check for other application errors
+                // Handle timeout when waiting for the error message
+                HandleTimeoutError("Timeout while waiting for the file upload error message.");
+            }
+            catch (WebDriverException ex)
+            {
+                // Handle browser session crash or shutdown
                 if (IsApplicationErrorPresent())
                 {
-                    Log("Application error occurred during file upload.", LogLevel.Error);
+                    Log("Application error occurred during file upload. Browser session terminated.", LogLevel.Error);
                 }
                 else
                 {
-                    Log("No feedback received for file upload exceeding size limit.", LogLevel.Warning);
+                    Log($"WebDriverException encountered: {ex.Message}", LogLevel.Error);
                 }
+
+                RestartBrowser();
+                Assert.Fail("Test failed due to WebDriver session termination.");
             }
 
         }
 
+        private void HandleTimeoutError(string message)
+        {
+            if (IsApplicationErrorPresent())
+            {
+                Log("Application error detected after timeout.", LogLevel.Error);
+            }
+            else
+            {
+                Log(message, LogLevel.Warning);
+            }
+        }
+
+        private void RestartBrowser()
+        {
+            try
+            {
+                driver?.Quit();
+                SetupBrowser(browserType); // Restart browser
+                fileUploadPage = new FileUploadPage(driver!); // Reinitialize the page object
+                fileUploadPage!.NavigateToFileUpload(); // Navigate back to the file upload page
+                Log("Browser session restarted successfully", LogLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                Log($"Failed to restart the browser: {ex.Message}", LogLevel.Error);
+                throw; // Fail the test if browser restart fails
+            }
+        }
+
+        
         [Test]
         [TestCase(BrowserType.Chrome)]
         [TestCase(BrowserType.Firefox)]
@@ -114,8 +154,6 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 return false;
             }
         }
-
-        // Wait for the file upload to complete
 
         // Log issue function (add logging mechanism here, e.g., file logging, test report logging, etc.)
         private void Log(string message, LogLevel level = LogLevel.Info)
