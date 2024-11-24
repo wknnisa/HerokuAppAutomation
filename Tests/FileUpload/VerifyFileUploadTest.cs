@@ -1,6 +1,7 @@
 ﻿using FileGeneratorLibrary.Utilities;
 using HerokuAppAutomation.Base;
 using HerokuAppAutomation.Pages;
+using HerokuAppAutomation.Utilities;
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
@@ -58,12 +59,11 @@ namespace HerokuAppAutomation.Tests.FileUpload
         {
             this.browserType = browserType;
 
-            // Path.Combine - combining the directory path and the file name.
-            // Path for a large file that should trigger an error
-            string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
-
             try
             {
+                // Path.Combine - combining the directory path and the file name.
+                // Path for a large file that should trigger an error
+                string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
                 fileUploadPage!.UploadFile(largeFilePath);
 
                 // Wait for an error message or check for application errors
@@ -72,6 +72,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
                 Assert.That(errorMessage.Text, Does.Contain("File size limit is exceeded"),
                     "Expected error message not found for large file.");
+                Logger.Log("Large file upload error handled correctly.");
             }
             catch (WebDriverTimeoutException)
             {
@@ -80,18 +81,50 @@ namespace HerokuAppAutomation.Tests.FileUpload
             }
             catch (WebDriverException ex)
             {
-                // Handle browser session crash or shutdown
-                if (IsApplicationErrorPresent())
-                {
-                    Log("Application error occurred during file upload. Browser session terminated.", LogLevel.Error);
-                }
-                else
-                {
-                    Log($"WebDriverException encountered: {ex.Message}", LogLevel.Error);
-                }
+                HandleSessionTermination(ex);
+            }
 
-                RestartBrowser();
-                Assert.Fail("Test failed due to WebDriver session termination.");
+        }
+
+        private void HandleSessionTermination(WebDriverException ex)
+        {
+            // Handle browser session crash or shutdown
+            if (IsApplicationErrorPresent())
+            {
+                Logger.Log("Application error occurred during file upload. Browser session terminated.", Logger.LogLevel.Error);
+            }
+            else
+            {
+                Logger.Log($"WebDriverException encountered: {ex.Message}", Logger.LogLevel.Error);
+            }
+
+            RestartBrowser();
+            Assert.Fail("Test failed due to WebDriver session termination.");
+        }
+
+        [Test]
+        [TestCase(BrowserType.Chrome)]
+        [TestCase(BrowserType.Firefox)]
+        [TestCase(BrowserType.Edge)]
+        public void FileUploadValidFile(BrowserType browserType)
+        {
+            this.browserType = browserType;
+
+            try
+            {
+                string validFilePath = Path.Combine(FileDirectory, ValidFileName);
+
+                Logger.Log($"Uploading valid file: {validFilePath}");
+                fileUploadPage!.UploadFile(validFilePath);
+
+                string uploadedFileName = fileUploadPage.GetUploadedFileName();
+                Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name mismatch for valid file.");
+                Logger.Log("Valid file upload test passed.");
+            }
+            catch (Exception ex) 
+            {
+                Logger.Log($"Test failed with exception : {ex.Message}", Logger.LogLevel.Error);
+                Assert.Fail($"Test failed with exception: {ex.Message}");
             }
 
         }
@@ -100,11 +133,11 @@ namespace HerokuAppAutomation.Tests.FileUpload
         {
             if (IsApplicationErrorPresent())
             {
-                Log("Application error detected after timeout.", LogLevel.Error);
+                Logger.Log("Application error detected after timeout.", Logger.LogLevel.Error);
             }
             else
             {
-                Log(message, LogLevel.Warning);
+                Logger.Log(message, Logger.LogLevel.Warning);
             }
         }
 
@@ -116,29 +149,13 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 SetupBrowser(browserType); // Restart browser
                 fileUploadPage = new FileUploadPage(driver!); // Reinitialize the page object
                 fileUploadPage!.NavigateToFileUpload(); // Navigate back to the file upload page
-                Log("Browser session restarted successfully", LogLevel.Info);
+                Logger.Log("Browser session restarted successfully", Logger.LogLevel.Info);
             }
             catch (Exception ex)
             {
-                Log($"Failed to restart the browser: {ex.Message}", LogLevel.Error);
+                Logger.Log($"Failed to restart the browser: {ex.Message}", Logger.LogLevel.Error);
                 throw; // Fail the test if browser restart fails
             }
-        }
-
-        
-        [Test]
-        [TestCase(BrowserType.Chrome)]
-        [TestCase(BrowserType.Firefox)]
-        [TestCase(BrowserType.Edge)]
-        public void FileUploadValidFile(BrowserType browserType)
-        {
-            this.browserType = browserType;
-
-            string validFilePath = Path.Combine(FileDirectory, ValidFileName);
-            fileUploadPage!.UploadFile(validFilePath);
-
-            string uploadedFileName = fileUploadPage.GetUploadedFileName();
-            Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name mismatch for valid file.");
         }
 
         // Check for an application error (e.g., if file is too large)
@@ -154,20 +171,5 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 return false;
             }
         }
-
-        // Log issue function (add logging mechanism here, e.g., file logging, test report logging, etc.)
-        private void Log(string message, LogLevel level = LogLevel.Info)
-        {
-            string logMessage = $"[{level.ToString().ToUpper()}] {message}";
-            TestContext.WriteLine(logMessage);
-        }
-
-        public enum LogLevel 
-        {
-            Info,
-            Warning,
-            Error
-        }
-
     }
 }
