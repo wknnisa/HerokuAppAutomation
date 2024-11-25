@@ -22,7 +22,9 @@ namespace HerokuAppAutomation.Pages
             this.driver = driver ?? throw new ArgumentNullException(nameof(driver), "Driver cannot be null.");
         }
 
-        //Navigate to the File Upload page and handle the iframe context
+        /// <summary>
+        /// Navigate to the File Upload page and handle the iframe context
+        /// </summary>
         public void NavigateToFileUpload()
         {
             try 
@@ -30,59 +32,78 @@ namespace HerokuAppAutomation.Pages
                 driver!.Navigate().GoToUrl(FileUploadUrl);
                 Logger.Log("Navigated to File Upload page successfully.");
 
+                // Switch to iframe if it exists
                 IWebElement iframeElement = WaitForElementToBeVisible(iframeLocator);
                 driver.SwitchTo().Frame(iframeElement);
 
                 Logger.Log("Switched to iframe successfully.");
             }
-            
+            catch (Exception ex)
+            {
+                ScreenshotHelper.TakeScreenshot(driver, "NavigateToFileUploadFailure.png");
+                throw new Exception($"NavigateToFileUpload failed: {ex.Message}");
+            }
         }
 
-        // Method to upload a file
+        /// <summary>
+        /// Upload a file using the file input and submit
+        /// </summary>
+        /// <param name="filePath">Path of the file to be uploaded</param>
         public void UploadFile(string filePath)
         {
             try
             {
-                Logger.Log("Waiting for file upload input...");
-                var uploadInput = WaitForElementToBeVisible(fileUploadInput);
-                Logger.Log("File upload input located.");
-                uploadInput.SendKeys(filePath);
+                NavigateToFileUpload();
 
-                Logger.Log("Waiting for upload button...");
-                var uploadBtn = WaitForElementToBeVisible(uploadButton);
-                Logger.Log("Upload button located. Clicking upload.");
+                // Wait for file input and upload button
+                IWebElement uploadInput = WaitForElementToBeVisible(fileUploadInput);
+                uploadInput.SendKeys(filePath);
+                Logger.Log($"File path '{filePath}' sent to the file input.");
+
+                IWebElement uploadBtn = WaitForElementToBeVisible(uploadButton);
                 uploadBtn.Click();
+                Logger.Log("Clicked the upload button successfully.");
             }
             catch (Exception ex)
             {
-                Logger.Log($"UploadFile failed: {ex.Message}", Logger.LogLevel.Error);
-                throw;
+                ScreenshotHelper.TakeScreenshot(driver, "UploadFileFailure.png");
+                throw new Exception($"UploadFile failed: {ex.Message}");
+            }
+            finally
+            {
+                // Ensure switching back to default content
+                driver.SwitchTo().DefaultContent();
             }
         }
 
-        // Method to get the uploaded file name
+        /// <summary>
+        /// Get the uploaded file name displayed on the page
+        /// </summary>
+        /// <returns>Uploaded file name as a string</returns>
         public string GetUploadedFileName()
         {
             try
             {
                 Logger.Log("Waiting for uploaded file name...");
-                var uploadedFile = WaitForElementToBeVisible(uploadedFileMessage);
-                Logger.Log("Uploaded file name located.");
+                IWebElement uploadedFile = WaitForElementToBeVisible(uploadedFileMessage);
+                Logger.Log($"Uploaded file name located: {uploadedFile.Text}");
                 return uploadedFile.Text;
             }
             catch (Exception ex)
             {
-                Logger.Log($"GetUploadedFileName failed: {ex.Message}", Logger.LogLevel.Error);
-                throw;
+                ScreenshotHelper.TakeScreenshot(driver, "GetUploadedFileNameFailure.png");
+                throw new Exception($"GetUploadedFileName failed: {ex.Message}");
             }
         }
 
-        // Utility method to wait for an element to be visible
+        /// <summary>
+        /// Utility method to wait until an element is visible
+        /// </summary>
+        /// <param name="locator">Element locator</param>
+        /// <returns>The visible IWebElement</returns>
         private IWebElement WaitForElementToBeVisible(By locator)
         {
-            // Wait for the page to load completely
             WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-            Logger.Log($"Waiting for element: {locator}");
             return wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementIsVisible(locator)); // Wait until the file input is visible
         }
     }
