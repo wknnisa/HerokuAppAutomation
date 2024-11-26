@@ -1,6 +1,7 @@
 ﻿using HerokuAppAutomation.Utilities;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
 
 namespace HerokuAppAutomation.Pages
 {
@@ -11,7 +12,6 @@ namespace HerokuAppAutomation.Pages
         private const int TimeoutInSeconds = 60;
 
         // Locators for File Upload
-        private By iframeLocator = By.XPath("//iframe[@src='www.herokucdn.com/error-pages/application-error.html']");
         private By fileUploadInput = By.Id("file-upload");
         private By uploadButton = By.Id("file-submit");
         private By uploadedFileMessage = By.Id("uploaded-files");
@@ -23,23 +23,42 @@ namespace HerokuAppAutomation.Pages
         }
 
         /// <summary>
-        /// Navigate to the File Upload page and handle the iframe context
+        /// Navigate to the File Upload page and ensure the page is ready.
         /// </summary>
         public void NavigateToFileUpload()
         {
             try 
             {
+                Logger.Log("Navigating to File Upload page...");
                 driver!.Navigate().GoToUrl(FileUploadUrl);
                 Logger.Log("Navigated to File Upload page successfully.");
 
-                // Switch to iframe if it exists
-                IWebElement iframeElement = WaitForElementToBeVisible(iframeLocator);
-                driver.SwitchTo().Frame(iframeElement);
+                if (driver!.Url != FileUploadUrl) 
+                {
+                    throw new Exception($"Driver failed to navigate to the correct URL. Current URL: {driver.Url}");
+                }
 
-                Logger.Log("Switched to iframe successfully.");
+                // Explicit wait for the file upload input to be visible
+                Logger.Log("Waiting for file upload input element to become visible...");
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+                wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
+                Logger.Log("File upload input is visible and ready for interaction.");
+            }
+            catch (WebDriverTimeoutException ex)
+            {
+                Logger.Log($"Timeout occurred while waiting for file upload input: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver, "NavigateToFiLeUploadTimeout.png");
+                throw new Exception($"NavigateToFileUpload failed due to timeout: {ex.Message}");
+            }
+            catch (NoSuchElementException ex)
+            {
+                Logger.Log($"Element not found during navigation: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver, "NavigateToFileUploadNoSuchElement.png");
+                throw new Exception($"NavigateToFileUpload failed due to missing elements: {ex.Message}");
             }
             catch (Exception ex)
             {
+                Logger.Log($"Unexpected error during navigation: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "NavigateToFileUploadFailure.png");
                 throw new Exception($"NavigateToFileUpload failed: {ex.Message}");
             }

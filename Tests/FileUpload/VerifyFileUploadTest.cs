@@ -74,13 +74,19 @@ namespace HerokuAppAutomation.Tests.FileUpload
                     "Expected error message not found for large file.");
                 Logger.Log("Large file upload error handled correctly.");
             }
-            catch (WebDriverTimeoutException)
+            catch (WebDriverTimeoutException ex)
             {
+                // Handle timeout when waiting for the error message
+                Logger.Log($"Timeout error: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver!, "FileUploadSizeLimitTimeoutError.png"); // Take screenshot on timeout
                 // Handle timeout when waiting for the error message
                 HandleTimeoutError("Timeout while waiting for the file upload error message.");
             }
             catch (WebDriverException ex)
             {
+                // Handle session termination or other WebDriver errors
+                Logger.Log($"WebDriverException: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver!, "FileUploadSizeLimitWebDriverError.png"); // Take screenshot on WebDriver exception
                 HandleSessionTermination(ex);
             }
 
