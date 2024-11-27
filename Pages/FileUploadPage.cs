@@ -72,9 +72,16 @@ namespace HerokuAppAutomation.Pages
         {
             try
             {
+                // Validate file path
+                if (!File.Exists(filePath))
+                {
+                    throw new Exception($"File not found at: {filePath}");
+                }
+
                 NavigateToFileUpload();
 
-                // Wait for file input and upload button
+                // Wait for file input and upload button to become interactable
+                Logger.Log("Waiting for file input to become interactable...");
                 IWebElement uploadInput = WaitForElementToBeVisible(fileUploadInput);
                 uploadInput.SendKeys(filePath);
                 Logger.Log($"File path '{filePath}' sent to the file input.");

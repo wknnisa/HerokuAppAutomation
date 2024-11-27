@@ -98,10 +98,12 @@ namespace HerokuAppAutomation.Tests.FileUpload
             if (IsApplicationErrorPresent())
             {
                 Logger.Log("Application error occurred during file upload. Browser session terminated.", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver!, "ApplicationErrorDuringFileUpload.png"); // Capture screenshot on application error
             }
             else
             {
                 Logger.Log($"WebDriverException encountered: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver!, "WebDriverExceptionDuringFileUpload.png");
             }
 
             RestartBrowser();
@@ -129,7 +131,9 @@ namespace HerokuAppAutomation.Tests.FileUpload
             }
             catch (Exception ex) 
             {
+                // Handle any unexpected errors
                 Logger.Log($"Test failed with exception : {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver!, "FileUploadValidFileError.png"); // Take screenshot on failure
                 Assert.Fail($"Test failed with exception: {ex.Message}");
             }
 
