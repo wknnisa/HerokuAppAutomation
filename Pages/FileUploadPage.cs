@@ -30,18 +30,20 @@ namespace HerokuAppAutomation.Pages
             try 
             {
                 Logger.Log("Navigating to File Upload page...");
+                driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(120); // Increase page load timeout
                 driver!.Navigate().GoToUrl(FileUploadUrl);
-                Logger.Log("Navigated to File Upload page successfully.");
 
-                if (driver!.Url != FileUploadUrl) 
+                // Validate if the correct URL is loaded
+                if (driver!.Url.Contains("upload")) 
                 {
                     throw new Exception($"Driver failed to navigate to the correct URL. Current URL: {driver.Url}");
                 }
+                Logger.Log("Navigated to File Upload page successfully.");
 
-                // Explicit wait for the file upload input to be visible
+                // Wait for file upload input to be visible
                 Logger.Log("Waiting for file upload input element to become visible...");
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-                wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
+                IWebElement uploadInput = wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
                 Logger.Log("File upload input is visible and ready for interaction.");
             }
             catch (WebDriverTimeoutException ex)
@@ -82,23 +84,24 @@ namespace HerokuAppAutomation.Pages
 
                 // Wait for file input and upload button to become interactable
                 Logger.Log("Waiting for file input to become interactable...");
-                IWebElement uploadInput = WaitForElementToBeVisible(fileUploadInput);
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+                IWebElement uploadInput = wait.Until(ExpectedConditions.ElementToBeClickable(fileUploadInput));
+                Logger.Log("File input is interactable.");
+
                 uploadInput.SendKeys(filePath);
                 Logger.Log($"File path '{filePath}' sent to the file input.");
 
-                IWebElement uploadBtn = WaitForElementToBeVisible(uploadButton);
+                IWebElement uploadBtn = wait.Until(ExpectedConditions.ElementToBeClickable(uploadButton));
+                Logger.Log("Upload button is interactable.");
+
                 uploadBtn.Click();
                 Logger.Log("Clicked the upload button successfully.");
             }
             catch (Exception ex)
             {
+                Logger.Log($"UploadFile failed: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "UploadFileFailure.png");
                 throw new Exception($"UploadFile failed: {ex.Message}");
-            }
-            finally
-            {
-                // Ensure switching back to default content
-                driver.SwitchTo().DefaultContent();
             }
         }
 
