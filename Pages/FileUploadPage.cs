@@ -1,4 +1,5 @@
 ﻿using HerokuAppAutomation.Utilities;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
@@ -29,12 +30,21 @@ namespace HerokuAppAutomation.Pages
         {
             try 
             {
+                Logger.Log("Starting with a clean browser state...");
+
+                // Clear cookies and refresh the page to ensure a clean session
+                driver.Manage().Cookies.DeleteAllCookies(); // Delete all cookies to start fresh
+                driver.Navigate().Refresh(); // Refresh to ensure the page reloads from a clean state
+
                 Logger.Log("Navigating to File Upload page...");
                 driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(120); // Increase page load timeout
-                driver!.Navigate().GoToUrl(FileUploadUrl);
+                driver.Navigate().GoToUrl(FileUploadUrl);
 
-                // Validate if the correct URL is loaded
-                if (driver!.Url.Contains("upload")) 
+                Logger.Log("Waiting for URL to match the expected File Upload URL...");
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+                bool isCorrectUrl = wait.Until(d => d.Url.Contains("upload"));
+
+                if (!isCorrectUrl) 
                 {
                     throw new Exception($"Driver failed to navigate to the correct URL. Current URL: {driver.Url}");
                 }
@@ -42,7 +52,6 @@ namespace HerokuAppAutomation.Pages
 
                 // Wait for file upload input to be visible
                 Logger.Log("Waiting for file upload input element to become visible...");
-                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
                 IWebElement uploadInput = wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
                 Logger.Log("File upload input is visible and ready for interaction.");
             }
@@ -96,6 +105,11 @@ namespace HerokuAppAutomation.Pages
 
                 uploadBtn.Click();
                 Logger.Log("Clicked the upload button successfully.");
+
+                // Wait for the upload confirmation message
+                Logger.Log("Waiting for upload confirmation message...");
+                IWebElement uploadMessage = wait.Until(ExpectedConditions.ElementIsVisible(uploadedFileMessage));
+                Logger.Log($"Upload confirmed. Message: {uploadMessage.Text}");
             }
             catch (Exception ex)
             {
@@ -132,8 +146,19 @@ namespace HerokuAppAutomation.Pages
         /// <returns>The visible IWebElement</returns>
         private IWebElement WaitForElementToBeVisible(By locator)
         {
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-            return wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementIsVisible(locator)); // Wait until the file input is visible
+            try
+            {
+                Logger.Log($"Waiting for element to be visible: {locator}");
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+                IWebElement element = wait.Until(ExpectedConditions.ElementIsVisible(locator));
+                Logger.Log($"Element found and visible: {locator}");
+                return element;
+            }
+            catch (WebDriverTimeoutException ex)
+            {
+                Logger.Log($"Timeout while waiting for element to be visible: {locator}. Error: {ex.Message}", Logger.LogLevel.Error);
+                throw;
+            }
         }
     }
 }
