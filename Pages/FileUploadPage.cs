@@ -9,7 +9,7 @@ namespace HerokuAppAutomation.Pages
     {
         private readonly IWebDriver driver;
         private const string FileUploadUrl = "https://the-internet.herokuapp.com/upload";
-        private const int TimeoutInSeconds = 60;
+        public int TimeoutInSeconds = 60;
 
         // Locators for File Upload
         private By fileUploadInput = By.Id("file-upload");
@@ -29,6 +29,12 @@ namespace HerokuAppAutomation.Pages
         {
             try 
             {
+                Logger.Log("Starting with a clean browser state...");
+
+                // Clear cookies and refresh the page to ensure a clean session
+                driver.Manage().Cookies.DeleteAllCookies(); // Delete all cookies to start fresh
+                driver.Navigate().Refresh(); // Refresh to ensure the page reloads from a clean state
+
                 Logger.Log("Navigating to File Upload page...");
                 driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(120); // Increase page load timeout
                 driver!.Navigate().GoToUrl(FileUploadUrl);

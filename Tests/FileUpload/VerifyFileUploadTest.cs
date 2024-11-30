@@ -30,8 +30,14 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 SetupBrowser(browserType); // Ensure the browser is set up if not already done
             }
 
-            Assert.That(driver, Is.Not.Null, "Driver is not initialized.");
             fileUploadPage = new FileUploadPage(driver!); // Initialize the page object
+
+            // Adjust timeout specifically for Edge if it's detected
+            if (browserType == BrowserType.Edge)
+            {
+                Logger.Log("Adjusting timeout for Edge browser...");
+                fileUploadPage.TimeoutInSeconds = 120; // Increase timeout for Edge due to slowness
+            }
 
             fileUploadPage!.NavigateToFileUpload(); // Navigate to the File Upload page before each test
 
