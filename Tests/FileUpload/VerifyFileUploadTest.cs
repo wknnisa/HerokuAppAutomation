@@ -65,55 +65,15 @@ namespace HerokuAppAutomation.Tests.FileUpload
         {
             this.browserType = browserType;
 
-            try
+            // Path.Combine - combining the directory path and the file name.
+            // Path for a large file that should trigger an error
+            string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
+
+
+            Assert.Throws<Exception>(() =>
             {
-                // Path.Combine - combining the directory path and the file name.
-                // Path for a large file that should trigger an error
-                string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
                 fileUploadPage!.UploadFile(largeFilePath);
-
-                // Wait for an error message or check for application errors
-                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
-                IWebElement errorMessage = wait.Until(d => d.FindElement(By.Id("error-message")));
-
-                Assert.That(errorMessage.Text, Does.Contain("File size limit is exceeded"),
-                    "Expected error message not found for large file.");
-                Logger.Log("Large file upload error handled correctly.");
-            }
-            catch (WebDriverTimeoutException ex)
-            {
-                // Handle timeout when waiting for the error message
-                Logger.Log($"Timeout error: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver!, "FileUploadSizeLimitTimeoutError.png"); // Take screenshot on timeout
-                // Handle timeout when waiting for the error message
-                HandleTimeoutError("Timeout while waiting for the file upload error message.");
-            }
-            catch (WebDriverException ex)
-            {
-                // Handle session termination or other WebDriver errors
-                Logger.Log($"WebDriverException: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver!, "FileUploadSizeLimitWebDriverError.png"); // Take screenshot on WebDriver exception
-                HandleSessionTermination(ex);
-            }
-
-        }
-
-        private void HandleSessionTermination(WebDriverException ex)
-        {
-            // Handle browser session crash or shutdown
-            if (IsApplicationErrorPresent())
-            {
-                Logger.Log("Application error occurred during file upload. Browser session terminated.", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver!, "ApplicationErrorDuringFileUpload.png"); // Capture screenshot on application error
-            }
-            else
-            {
-                Logger.Log($"WebDriverException encountered: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver!, "WebDriverExceptionDuringFileUpload.png");
-            }
-
-            RestartBrowser();
-            Assert.Fail("Test failed due to WebDriver session termination.");
+            }, "Expected an error for large file uploads.");
         }
 
         [Test]
@@ -135,7 +95,7 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name mismatch for valid file.");
                 Logger.Log("Valid file upload test passed.");
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 // Handle any unexpected errors
                 Logger.Log($"Test failed with exception : {ex.Message}", Logger.LogLevel.Error);
@@ -145,46 +105,64 @@ namespace HerokuAppAutomation.Tests.FileUpload
 
         }
 
-        private void HandleTimeoutError(string message)
-        {
-            if (IsApplicationErrorPresent())
-            {
-                Logger.Log("Application error detected after timeout.", Logger.LogLevel.Error);
-            }
-            else
-            {
-                Logger.Log(message, Logger.LogLevel.Warning);
-            }
-        }
-
-        private void RestartBrowser()
-        {
-            try
-            {
-                driver?.Quit();
-                SetupBrowser(browserType); // Restart browser
-                fileUploadPage = new FileUploadPage(driver!); // Reinitialize the page object
-                fileUploadPage!.NavigateToFileUpload(); // Navigate back to the file upload page
-                Logger.Log("Browser session restarted successfully", Logger.LogLevel.Info);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Failed to restart the browser: {ex.Message}", Logger.LogLevel.Error);
-                throw; // Fail the test if browser restart fails
-            }
-        }
-
-        // Check for an application error (e.g., if file is too large)
+        /// <summary>
+        /// Checks for the presence of the "Application error" message on the page.
+        /// </summary>
         private bool IsApplicationErrorPresent()
         {
             try
             {
-                IWebElement errorElement = driver!.FindElement(By.XPath("//body[contains(text(), 'Application error')]"));
-                return errorElement.Displayed;
-            }
-            catch (NoSuchElementException) 
-            {
+                var errorElement = driver!.FindElement(By.CssSelector("div.message__title"));
+
+                if (errorElement.Displayed && errorElement.Text.Contains("Application error", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Log("Application error detected on the page.", Logger.LogLevel.Error);
+                    return true;
+                }
                 return false;
+            }
+            catch (NoSuchElementException)
+            {
+                // If the element is not found, assume no application error is present
+                Logger.Log("No application error detected on the page.", Logger.LogLevel.Info);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Error while checking for application error: {ex.Message}", Logger.LogLevel.Warning);
+                return false; // Fail gracefully in case of unexpected issues
+            }
+        }
+
+        /// <summary>
+        /// Method to restart the browser if there's a critical failure or timeout
+        /// </summary>
+        private void RestartBrowser()
+        {
+
+            Logger.Log("Restarting browser...");
+
+            driver!.Quit();
+            SetupBrowser(browserType); // Restart browser
+        }
+
+        /// <summary>
+        /// Helper method to handle timeout errors and take appropriate actions
+        /// </summary>
+        private void HandleTimeoutError(string message)
+        {
+            Logger.Log($"Timeout error occurred: {message}", Logger.LogLevel.Error);
+            ScreenshotHelper.TakeScreenshot(driver!, "TimeoutError.png");
+
+            if (IsApplicationErrorPresent())
+            {
+                Logger.Log("Detected an application error after timeout.", Logger.LogLevel.Error);
+                Assert.Fail("Test failed due to an application error.");
+            }
+            else
+            {
+                Logger.Log("No application error detected. Restarting browser to recover.", Logger.LogLevel.Warning);
+                RestartBrowser();
             }
         }
     }

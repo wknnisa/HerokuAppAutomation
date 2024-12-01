@@ -39,8 +39,11 @@ namespace HerokuAppAutomation.Pages
                 driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(120); // Increase page load timeout
                 driver!.Navigate().GoToUrl(FileUploadUrl);
 
-                // Validate if the correct URL is loaded
-                if (driver!.Url.Contains("upload")) 
+                Logger.Log("Waiting for URL to match the expected File Upload URL...");
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+                bool isCorrectUrl = wait.Until(d => d.Url.Contains("upload"));
+
+                if (!isCorrectUrl)
                 {
                     throw new Exception($"Driver failed to navigate to the correct URL. Current URL: {driver.Url}");
                 }
@@ -48,7 +51,6 @@ namespace HerokuAppAutomation.Pages
 
                 // Wait for file upload input to be visible
                 Logger.Log("Waiting for file upload input element to become visible...");
-                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
                 IWebElement uploadInput = wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
                 Logger.Log("File upload input is visible and ready for interaction.");
             }
@@ -80,34 +82,27 @@ namespace HerokuAppAutomation.Pages
         {
             try
             {
-                // Validate file path
-                if (!File.Exists(filePath))
-                {
-                    throw new Exception($"File not found at: {filePath}");
-                }
+                // Interact with the file input
+                var fileInput = driver.FindElement(By.Id("file-upload"));
+                fileInput.SendKeys(filePath);
 
-                NavigateToFileUpload();
+                // Click the upload button
+                var uploadButton = driver.FindElement(By.Id("file-submit"));
+                uploadButton.Click();
 
-                // Wait for file input and upload button to become interactable
-                Logger.Log("Waiting for file input to become interactable...");
-                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-                IWebElement uploadInput = wait.Until(ExpectedConditions.ElementToBeClickable(fileUploadInput));
-                Logger.Log("File input is interactable.");
-
-                uploadInput.SendKeys(filePath);
-                Logger.Log($"File path '{filePath}' sent to the file input.");
-
-                IWebElement uploadBtn = wait.Until(ExpectedConditions.ElementToBeClickable(uploadButton));
-                Logger.Log("Upload button is interactable.");
-
-                uploadBtn.Click();
-                Logger.Log("Clicked the upload button successfully.");
+                Logger.Log("File upload initiated successfully.");
             }
-            catch (Exception ex)
+            catch (WebDriverTimeoutException ex)
             {
                 Logger.Log($"UploadFile failed: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "UploadFileFailure.png");
-                throw new Exception($"UploadFile failed: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Unexpected error during file upload: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver, "UploadFileError.png");
+                throw;
             }
         }
 
@@ -138,8 +133,19 @@ namespace HerokuAppAutomation.Pages
         /// <returns>The visible IWebElement</returns>
         private IWebElement WaitForElementToBeVisible(By locator)
         {
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-            return wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementIsVisible(locator)); // Wait until the file input is visible
+            try
+            {
+                Logger.Log($"Waiting for element to be visible: {locator}");
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+                IWebElement element = wait.Until(ExpectedConditions.ElementIsVisible(locator));
+                Logger.Log($"Element found and visible: {locator}");
+                return element;
+            }
+            catch (WebDriverTimeoutException ex)
+            {
+                Logger.Log($"Timeout while waiting for element to be visible: {locator}. Error: {ex.Message}", Logger.LogLevel.Error);
+                throw;
+            }
         }
     }
 }
