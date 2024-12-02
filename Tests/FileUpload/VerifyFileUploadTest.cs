@@ -68,12 +68,9 @@ namespace HerokuAppAutomation.Tests.FileUpload
             // Path.Combine - combining the directory path and the file name.
             // Path for a large file that should trigger an error
             string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
+            Assert.Throws<Exception>(() => fileUploadPage!.UploadFile(largeFilePath), "Expected an error for large file uploads.");
 
-
-            Assert.Throws<Exception>(() =>
-            {
-                fileUploadPage!.UploadFile(largeFilePath);
-            }, "Expected an error for large file uploads.");
+            
         }
 
         [Test]
@@ -106,31 +103,31 @@ namespace HerokuAppAutomation.Tests.FileUpload
         }
 
         /// <summary>
-        /// Checks for the presence of the "Application error" message on the page.
+        /// Method to check if the application error iframe is present.
         /// </summary>
         private bool IsApplicationErrorPresent()
         {
             try
             {
-                var errorElement = driver!.FindElement(By.CssSelector("div.message__title"));
+                // Locate the iframe by src or other identifying attributes
+                var errorIframe = driver!.FindElement(By.CssSelector("iframe[src='https://www.herokucdn.com/error-pages/application-error.html']"));
 
-                if (errorElement.Displayed && errorElement.Text.Contains("Application error", StringComparison.OrdinalIgnoreCase))
+                if (errorIframe.Displayed)
                 {
-                    Logger.Log("Application error detected on the page.", Logger.LogLevel.Error);
+                    Logger.Log("Application error iframe detected.");
                     return true;
                 }
                 return false;
             }
             catch (NoSuchElementException)
             {
-                // If the element is not found, assume no application error is present
-                Logger.Log("No application error detected on the page.", Logger.LogLevel.Info);
-                return false;
+                Logger.Log("No application error iframe found.", Logger.LogLevel.Info);
+                return false; // If iframe is not found, assume no application error
             }
             catch (Exception ex)
             {
-                Logger.Log($"Error while checking for application error: {ex.Message}", Logger.LogLevel.Warning);
-                return false; // Fail gracefully in case of unexpected issues
+                Logger.Log($"Unexpected error while checking for application error iframe: {ex.Message}", Logger.LogLevel.Error);
+                return false; // Fail-safe: return false on unexpected exceptions
             }
         }
 

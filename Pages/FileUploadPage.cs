@@ -41,36 +41,17 @@ namespace HerokuAppAutomation.Pages
 
                 Logger.Log("Waiting for URL to match the expected File Upload URL...");
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-                bool isCorrectUrl = wait.Until(d => d.Url.Contains("upload"));
-
-                if (!isCorrectUrl)
-                {
-                    throw new Exception($"Driver failed to navigate to the correct URL. Current URL: {driver.Url}");
-                }
-                Logger.Log("Navigated to File Upload page successfully.");
+                wait.Until(d => d.Url.Contains("upload"));
 
                 // Wait for file upload input to be visible
                 Logger.Log("Waiting for file upload input element to become visible...");
-                IWebElement uploadInput = wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
-                Logger.Log("File upload input is visible and ready for interaction.");
+                wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
             }
             catch (WebDriverTimeoutException ex)
             {
                 Logger.Log($"Timeout occurred while waiting for file upload input: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "NavigateToFiLeUploadTimeout.png");
                 throw new Exception($"NavigateToFileUpload failed due to timeout: {ex.Message}");
-            }
-            catch (NoSuchElementException ex)
-            {
-                Logger.Log($"Element not found during navigation: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver, "NavigateToFileUploadNoSuchElement.png");
-                throw new Exception($"NavigateToFileUpload failed due to missing elements: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Unexpected error during navigation: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver, "NavigateToFileUploadFailure.png");
-                throw new Exception($"NavigateToFileUpload failed: {ex.Message}");
             }
         }
 
