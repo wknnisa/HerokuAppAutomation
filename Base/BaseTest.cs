@@ -1,8 +1,10 @@
-﻿using NUnit.Framework;
+﻿using HerokuAppAutomation.Utilities;
+using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
+using static HerokuAppAutomation.Tests.HomePage.VerifyHomePageTitleTest;
 
 namespace HerokuAppAutomation.Base
 {
@@ -64,6 +66,18 @@ namespace HerokuAppAutomation.Base
         {
             driver?.Quit(); // Close and dispose of the browser
             driver = null;   // Reset the driver to ensure no reuse
+        }
+
+        /// <summary>
+        /// Method to restart the browser if there's a critical failure or timeout
+        /// </summary>
+        protected void RestartBrowser()
+        {
+            Logger.Log("Restarting browser...");
+
+            driver?.Quit();
+
+            driver = SetupBrowser(browserType);
         }
     }
 }

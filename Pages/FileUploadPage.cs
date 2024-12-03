@@ -1,4 +1,5 @@
 ﻿using HerokuAppAutomation.Utilities;
+using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
@@ -42,6 +43,13 @@ namespace HerokuAppAutomation.Pages
                 Logger.Log("Waiting for URL to match the expected File Upload URL...");
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
                 wait.Until(d => d.Url.Contains("upload"));
+
+                if (IsApplicationErrorPresent())
+                {
+                    Logger.Log("Application error detected in iframe.", Logger.LogLevel.Error);
+                    ScreenshotHelper.TakeScreenshot(driver, "ApplicationErrorDetected.png");
+                    throw new Exception("Navigation failed due to an application error.");
+                }
 
                 // Wait for file upload input to be visible
                 Logger.Log("Waiting for file upload input element to become visible...");
@@ -126,6 +134,55 @@ namespace HerokuAppAutomation.Pages
             {
                 Logger.Log($"Timeout while waiting for element to be visible: {locator}. Error: {ex.Message}", Logger.LogLevel.Error);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Method to check if the application error iframe is present.
+        /// </summary>
+        public bool IsApplicationErrorPresent()
+        {
+            try
+            {
+                // Locate the iframe by src or other identifying attributes
+                var errorIframe = driver!.FindElement(By.CssSelector("iframe[src='https://www.herokucdn.com/error-pages/application-error.html']"));
+
+                if (errorIframe.Displayed)
+                {
+                    Logger.Log("Application error iframe detected.");
+                    return true;
+                }
+                return false;
+            }
+            catch (NoSuchElementException)
+            {
+                Logger.Log("No application error iframe found.", Logger.LogLevel.Info);
+                return false; // If iframe is not found, assume no application error
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Unexpected error while checking for application error iframe: {ex.Message}", Logger.LogLevel.Error);
+                return false; // Fail-safe: return false on unexpected exceptions
+            }
+        }
+
+        /// <summary>
+        /// Helper method to handle timeout errors and take appropriate actions
+        /// </summary>
+        private void HandleTimeoutError(string message)
+        {
+            Logger.Log($"Timeout error occurred: {message}", Logger.LogLevel.Error);
+            ScreenshotHelper.TakeScreenshot(driver!, "TimeoutError.png");
+
+            if (IsApplicationErrorPresent())
+            {
+                Logger.Log("Detected an application error after timeout.", Logger.LogLevel.Error);
+                Assert.Fail("Test failed due to an application error.");
+            }
+            else
+            {
+                Logger.Log("No application error detected. Restarting browser to recover.", Logger.LogLevel.Warning);
+                RestartBrowser();
             }
         }
     }
