@@ -19,7 +19,6 @@ namespace HerokuAppAutomation.Tests.FileUpload
         private const string LargeFileName = "500mb.zip";
         private const int LargeFileSize = 500;
 
-        private BrowserType browserType;
         private FileUploadPage? fileUploadPage;
 
         [SetUp]

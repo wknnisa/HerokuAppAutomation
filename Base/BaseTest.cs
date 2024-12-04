@@ -1,10 +1,10 @@
 ﻿using HerokuAppAutomation.Utilities;
 using NUnit.Framework;
 using OpenQA.Selenium;
+using OpenQA.Selenium.BiDi.Communication;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
-using static HerokuAppAutomation.Tests.HomePage.VerifyHomePageTitleTest;
 
 namespace HerokuAppAutomation.Base
 {
@@ -16,10 +16,14 @@ namespace HerokuAppAutomation.Base
     public class BaseTest
     {
         protected IWebDriver? driver;
+        protected BrowserType browserType;
 
-        // Setup method to initialize the browser based on the test case
-        public void SetupBrowser(BrowserType browserType)
+        /// <summary>
+        /// Sets up the browser driver based on the specified browser type.
+        /// </summary>
+        public void SetupBrowser(BrowserType browser)
         {
+            Logger.Log($"Setting up browser: {browser}");
 
             // Declare browser options
             ChromeOptions chromeOptions = new ChromeOptions();
@@ -60,24 +64,46 @@ namespace HerokuAppAutomation.Base
             driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(60); // Script timeout
         }
 
-        // Tear down method to close the browser after each test
-        [TearDown]
-        public void CleanUp()
-        {
-            driver?.Quit(); // Close and dispose of the browser
-            driver = null;   // Reset the driver to ensure no reuse
-        }
-
         /// <summary>
-        /// Method to restart the browser if there's a critical failure or timeout
+        /// Restarts the browser and sets up a fresh driver instance.
         /// </summary>
         protected void RestartBrowser()
         {
-            Logger.Log("Restarting browser...");
+            Logger.Log("Restarting the browser...");
 
-            driver?.Quit();
+            if (driver != null)
+            {
+                try
+                {
+                    driver?.Quit();
+                    Logger.Log("Browser session ended successfully.");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"Error during browser quit: {ex.Message}", Logger.LogLevel.Error);
+                }
+                finally
+                {
+                    driver = null;
+                }
+            }
 
-            driver = SetupBrowser(browserType);
+            SetupBrowser(browserType);
+            Logger.Log("Browser restarted and ready for testing.");
+        }
+
+        /// <summary>
+        /// Cleans up the driver after each test.
+        /// </summary>
+        [TearDown]
+        public void CleanUp()
+        {
+            if (driver != null) 
+            {
+                driver?.Quit(); // Close and dispose of the browser
+                driver = null;   // Reset the driver to ensure no reuse
+            }
+            Logger.Log("Browser instance cleaned up.");
         }
     }
 }
