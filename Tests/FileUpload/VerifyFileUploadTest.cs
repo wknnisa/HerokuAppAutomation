@@ -29,7 +29,8 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 SetupBrowser(browserType); // Ensure the browser is set up if not already done
             }
 
-            fileUploadPage = new FileUploadPage(driver!); // Initialize the page object
+            // Pass RestartBrowser method as a delegate to FileUploadPage
+            fileUploadPage = new FileUploadPage(driver!, RestartBrowser); // Initialize the page object
 
             // Adjust timeout specifically for Edge if it's detected
             if (browserType == BrowserType.Edge)
@@ -90,6 +91,12 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 string uploadedFileName = fileUploadPage.GetUploadedFileName();
                 Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name mismatch for valid file.");
                 Logger.Log("Valid file upload test passed.");
+            }
+            catch (TimeoutException ex)
+            {
+                Logger.Log($"Timeout occurred: {ex.Message}. Restarting browser...", Logger.LogLevel.Error);
+                RestartBrowser();
+                Assert.Fail($"Test failed due to timeout: {ex.Message}");
             }
             catch (Exception ex)
             {

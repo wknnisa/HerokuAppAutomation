@@ -9,6 +9,7 @@ namespace HerokuAppAutomation.Pages
     public class FileUploadPage
     {
         private readonly IWebDriver driver;
+        private readonly Action restartBrowserCallback; // Delegate to call RestartBrowser from BaseTest
         private const string FileUploadUrl = "https://the-internet.herokuapp.com/upload";
         public int TimeoutInSeconds = 60;
 
@@ -18,9 +19,10 @@ namespace HerokuAppAutomation.Pages
         private By uploadedFileMessage = By.Id("uploaded-files");
 
         // Constructor
-        public FileUploadPage(IWebDriver driver)
+        public FileUploadPage(IWebDriver driver, Action restartBrowserCallback)
         {
             this.driver = driver ?? throw new ArgumentNullException(nameof(driver), "Driver cannot be null.");
+            this.restartBrowserCallback = restartBrowserCallback ?? throw new ArgumentNullException(nameof(restartBrowserCallback), "Restart browser callback cannot be null.");
         }
 
         /// <summary>
@@ -59,7 +61,7 @@ namespace HerokuAppAutomation.Pages
             {
                 Logger.Log($"Timeout occurred while waiting for file upload input: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "NavigateToFiLeUploadTimeout.png");
-                throw new Exception($"NavigateToFileUpload failed due to timeout: {ex.Message}");
+                throw new Exception($"Timeout during navigation: {ex.Message}");
             }
         }
 
@@ -182,7 +184,7 @@ namespace HerokuAppAutomation.Pages
             else
             {
                 Logger.Log("No application error detected. Restarting browser to recover.", Logger.LogLevel.Warning);
-                RestartBrowser();
+                restartBrowserCallback.Invoke();
             }
         }
     }
