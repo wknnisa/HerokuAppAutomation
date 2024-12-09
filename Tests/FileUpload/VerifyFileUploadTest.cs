@@ -65,12 +65,23 @@ namespace HerokuAppAutomation.Tests.FileUpload
         {
             this.browserType = browserType;
 
-            // Path.Combine - combining the directory path and the file name.
-            // Path for a large file that should trigger an error
             string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
-            Assert.Throws<Exception>(() => fileUploadPage!.UploadFile(largeFilePath), "Expected an error for large file uploads.");
+    
+            try
+            {
+                fileUploadPage!.UploadFile(largeFilePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Caught exception: {ex.Message}", Logger.LogLevel.Error);
 
-            
+                bool isAppErrorPresent = fileUploadPage!.IsApplicationErrorPresent();
+                Assert.That(isAppErrorPresent, Is.True, "Expected an application error due to large file upload.");
+                return;
+            }
+
+            Assert.That(false, Is.True, "Expected an error for large file uploads, but the upload succeeded.");
+
         }
 
         [Test]

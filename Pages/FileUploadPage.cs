@@ -82,18 +82,25 @@ namespace HerokuAppAutomation.Pages
                 uploadButton.Click();
 
                 Logger.Log("File upload initiated successfully.");
+
+                if (IsApplicationErrorPresent()) 
+                {
+                    Logger.Log("Application error detected during upload.", Logger.LogLevel.Error);
+                    ScreenshotHelper.TakeScreenshot(driver, "ApplicationErrorDetected.png");
+                    throw new Exception("Application Error detected during file upload.");
+                }
             }
             catch (WebDriverTimeoutException ex)
             {
-                Logger.Log($"UploadFile failed: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver, "UploadFileFailure.png");
-                throw;
+                Logger.Log($"Timeout error during file upload: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver, "UploadFileTimeout.png");
+                throw new Exception($"Upload failed due to timeout: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
                 Logger.Log($"Unexpected error during file upload: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "UploadFileError.png");
-                throw;
+                throw new Exception($"Unexpected error during file upload: {ex.Message}", ex);
             }
         }
 
@@ -151,7 +158,7 @@ namespace HerokuAppAutomation.Pages
 
                 if (errorIframe.Displayed)
                 {
-                    Logger.Log("Application error iframe detected.");
+                    Logger.Log("Application error iframe detected.", Logger.LogLevel.Error);
                     return true;
                 }
                 return false;
