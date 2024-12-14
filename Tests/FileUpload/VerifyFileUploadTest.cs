@@ -66,22 +66,69 @@ namespace HerokuAppAutomation.Tests.FileUpload
             this.browserType = browserType;
 
             string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
-    
+            bool isAppErrorPresent = false;
+
+
             try
             {
+                Logger.Log($"Starting FileUploadSizeLimit test on {browserType}...");
+
+                // Attempt to upload the large file
                 fileUploadPage!.UploadFile(largeFilePath);
+
+                // Check for Heroku application error
+                isAppErrorPresent = fileUploadPage!.IsApplicationErrorPresent();
+                Assert.That(isAppErrorPresent, Is.True, "Expected an application error due to large file upload.");
+            }
+            catch (WebDriverTimeoutException ex)
+            {
+                Logger.Log($"Timeout detected during navigation or upload: {ex.Message}", Logger.LogLevel.Error);
+
+                if (browserType == BrowserType.Edge)
+                {
+                    Logger.Log("Retrying navigation for Edge after timeout...");
+                    RetryNavigateToFileUpload();
+                }
+
+                Assert.Fail($"Navigation or upload timeout: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Logger.Log($"Caught exception: {ex.Message}", Logger.LogLevel.Error);
+                Logger.Log($"Unexpected exception caught: {ex.Message}", Logger.LogLevel.Error);
 
-                bool isAppErrorPresent = fileUploadPage!.IsApplicationErrorPresent();
-                Assert.That(isAppErrorPresent, Is.True, "Expected an application error due to large file upload.");
-                return;
+                // Check if an application error was detected after exception
+                isAppErrorPresent = fileUploadPage!.IsApplicationErrorPresent();
+                if (isAppErrorPresent)
+                {
+                    Logger.Log("Application error detected after catching an exception.");
+                    Assert.That(isAppErrorPresent, Is.True, "Expected an application error due to large file upload.");
+                }
+                else
+                {
+                    Logger.Log("No application error detected.Failing test.", Logger.LogLevel.Error);
+                    Assert.Fail($"Test failed with unexpected exception: {ex.Message}");
+                }
             }
 
-            Assert.That(false, Is.True, "Expected an error for large file uploads, but the upload succeeded.");
+            if (!isAppErrorPresent)
+            {
+                Assert.That(false, Is.True, "Expected an error for large file uploads, but the upload succeeded.");
+            }
 
+            Logger.Log("FileUploadSizeLimit test completed successfully.");
+        }
+
+        private void RetryNavigateToFileUpload()
+        {
+            try
+            {
+                fileUploadPage!.NavigateToFileUpload();
+            }
+            catch (Exception retryEx) 
+            {
+                Logger.Log($"Retry failed: {retryEx.Message}", Logger.LogLevel.Error);
+                Assert.Fail($"Retry to navigate to File Upload page failed: {retryEx.Message}");
+            }
         }
 
         [Test]
