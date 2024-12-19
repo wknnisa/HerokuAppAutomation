@@ -4,7 +4,6 @@ using HerokuAppAutomation.Pages;
 using HerokuAppAutomation.Utilities;
 using NUnit.Framework;
 using OpenQA.Selenium;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace HerokuAppAutomation.Tests.FileUpload
 {
@@ -94,24 +93,8 @@ namespace HerokuAppAutomation.Tests.FileUpload
             catch (Exception ex)
             {
                 Logger.Log($"Unexpected exception caught: {ex.Message}", Logger.LogLevel.Error);
-
-                // Check if an application error was detected after exception
-                isAppErrorPresent = fileUploadPage!.IsApplicationErrorPresent();
-                if (isAppErrorPresent)
-                {
-                    Logger.Log("Application error detected after catching an exception.");
-                    Assert.That(isAppErrorPresent, Is.True, "Expected an application error due to large file upload.");
-                }
-                else
-                {
-                    Logger.Log("No application error detected.Failing test.", Logger.LogLevel.Error);
-                    Assert.Fail($"Test failed with unexpected exception: {ex.Message}");
-                }
-            }
-
-            if (!isAppErrorPresent)
-            {
-                Assert.That(false, Is.True, "Expected an error for large file uploads, but the upload succeeded.");
+                ScreenshotHelper.TakeScreenshot(driver!, "UnexpectedError.png");
+                Assert.Fail($"Test failed with unexpected exception: {ex.Message}");
             }
 
             Logger.Log("FileUploadSizeLimit test completed successfully.");

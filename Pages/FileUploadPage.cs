@@ -1,5 +1,4 @@
 ﻿using HerokuAppAutomation.Utilities;
-using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
@@ -32,35 +31,27 @@ namespace HerokuAppAutomation.Pages
         {
             try 
             {
-                Logger.Log("Starting with a clean browser state...");
-
                 // Clear cookies and refresh the page to ensure a clean session
                 driver.Manage().Cookies.DeleteAllCookies(); // Delete all cookies to start fresh
                 driver.Navigate().Refresh(); // Refresh to ensure the page reloads from a clean state
-
-                Logger.Log("Navigating to File Upload page...");
-                driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(120); // Increase page load timeout
                 driver!.Navigate().GoToUrl(FileUploadUrl);
 
-                Logger.Log("Waiting for URL to match the expected File Upload URL...");
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
                 wait.Until(d => d.Url.Contains("upload"));
 
                 if (IsApplicationErrorPresent())
                 {
-                    Logger.Log("Application error detected in iframe.", Logger.LogLevel.Error);
                     ScreenshotHelper.TakeScreenshot(driver, "ApplicationErrorDetected.png");
                     throw new Exception("Navigation failed due to an application error.");
                 }
 
                 // Wait for file upload input to be visible
-                Logger.Log("Waiting for file upload input element to become visible...");
                 wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
             }
             catch (WebDriverTimeoutException ex)
             {
-                Logger.Log($"Timeout occurred while waiting for file upload input: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver, "NavigateToFiLeUploadTimeout.png");
+                Logger.Log($"Timeout occurred while navigating: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver, "NavigateTimeout.png");
                 throw new Exception($"Timeout during navigation: {ex.Message}");
             }
         }
@@ -71,36 +62,38 @@ namespace HerokuAppAutomation.Pages
         /// <param name="filePath">Path of the file to be uploaded</param>
         public void UploadFile(string filePath)
         {
-            try
+            int retryCount = 0;
+            const int maxRetries = 3;
+
+            while (retryCount < maxRetries)
             {
-                // Interact with the file input
-                var fileInput = driver.FindElement(By.Id("file-upload"));
-                fileInput.SendKeys(filePath);
-
-                // Click the upload button
-                var uploadButton = driver.FindElement(By.Id("file-submit"));
-                uploadButton.Click();
-
-                Logger.Log("File upload initiated successfully.");
-
-                if (IsApplicationErrorPresent()) 
+                try
                 {
-                    Logger.Log("Application error detected during upload.", Logger.LogLevel.Error);
-                    ScreenshotHelper.TakeScreenshot(driver, "ApplicationErrorDetected.png");
-                    throw new Exception("Application Error detected during file upload.");
+                    // Interact with the file input
+                    var fileInput = driver.FindElement(fileUploadInput);
+                    fileInput.SendKeys(filePath);
+
+                    // Click the upload button
+                    var uploadButtonElement = driver.FindElement(uploadButton);
+                    uploadButtonElement.Click();
+
+                    Logger.Log("File upload initiated successfully.");
+
+                    if (IsApplicationErrorPresent())
+                    {
+                        ScreenshotHelper.TakeScreenshot(driver, "UploadError.png");
+                        throw new Exception("Application error detected during file upload.");
+                    }
+
+                    return;
                 }
-            }
-            catch (WebDriverTimeoutException ex)
-            {
-                Logger.Log($"Timeout error during file upload: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver, "UploadFileTimeout.png");
-                throw new Exception($"Upload failed due to timeout: {ex.Message}", ex);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Unexpected error during file upload: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver, "UploadFileError.png");
-                throw new Exception($"Unexpected error during file upload: {ex.Message}", ex);
+
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    Logger.Log($"Retrying file upload ({retryCount}/{maxRetries}): {ex.Message}", Logger.LogLevel.Warning);
+                    if (retryCount == maxRetries) throw;
+                }
             }
         }
 
@@ -112,14 +105,12 @@ namespace HerokuAppAutomation.Pages
         {
             try
             {
-                Logger.Log("Waiting for uploaded file name...");
                 IWebElement uploadedFile = WaitForElementToBeVisible(uploadedFileMessage);
-                Logger.Log($"Uploaded file name located: {uploadedFile.Text}");
                 return uploadedFile.Text;
             }
             catch (Exception ex)
             {
-                ScreenshotHelper.TakeScreenshot(driver, "GetUploadedFileNameFailure.png");
+                ScreenshotHelper.TakeScreenshot(driver, "GetUploadedFileNameError.png");
                 throw new Exception($"GetUploadedFileName failed: {ex.Message}");
             }
         }
@@ -131,19 +122,8 @@ namespace HerokuAppAutomation.Pages
         /// <returns>The visible IWebElement</returns>
         private IWebElement WaitForElementToBeVisible(By locator)
         {
-            try
-            {
-                Logger.Log($"Waiting for element to be visible: {locator}");
-                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-                IWebElement element = wait.Until(ExpectedConditions.ElementIsVisible(locator));
-                Logger.Log($"Element found and visible: {locator}");
-                return element;
-            }
-            catch (WebDriverTimeoutException ex)
-            {
-                Logger.Log($"Timeout while waiting for element to be visible: {locator}. Error: {ex.Message}", Logger.LogLevel.Error);
-                throw;
-            }
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+            return wait.Until(ExpectedConditions.ElementIsVisible(locator));
         }
 
         /// <summary>
@@ -154,44 +134,19 @@ namespace HerokuAppAutomation.Pages
             try
             {
                 // Locate the iframe by src or other identifying attributes
-                var errorIframe = driver!.FindElement(By.CssSelector("iframe[src='https://www.herokucdn.com/error-pages/application-error.html']"));
-
-                if (errorIframe.Displayed)
-                {
-                    Logger.Log("Application error iframe detected.", Logger.LogLevel.Error);
-                    return true;
-                }
-                return false;
+                var errorIframe = driver!.FindElement(By.CssSelector("iframe[src*='application-error.html']"));
+                return errorIframe.Displayed;
             }
             catch (NoSuchElementException)
             {
-                Logger.Log("No application error iframe found.", Logger.LogLevel.Info);
                 return false; // If iframe is not found, assume no application error
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Unexpected error while checking for application error iframe: {ex.Message}", Logger.LogLevel.Error);
-                return false; // Fail-safe: return false on unexpected exceptions
             }
         }
 
-        /// <summary>
-        /// Helper method to handle timeout errors and take appropriate actions
-        /// </summary>
-        private void HandleTimeoutError(string message)
-        {
-            Logger.Log($"Timeout error occurred: {message}", Logger.LogLevel.Error);
-            ScreenshotHelper.TakeScreenshot(driver!, "TimeoutError.png");
-
-            if (IsApplicationErrorPresent())
+        public void EnsureNoApplicationError()
+        { 
+            if (driver.FindElements(By.CssSelector("iframe[src*='application-error.html']")).Any())
             {
-                Logger.Log("Detected an application error after timeout.", Logger.LogLevel.Error);
-                Assert.Fail("Test failed due to an application error.");
-            }
-            else
-            {
-                Logger.Log("No application error detected. Restarting browser to recover.", Logger.LogLevel.Warning);
-                restartBrowserCallback.Invoke();
             }
         }
     }
