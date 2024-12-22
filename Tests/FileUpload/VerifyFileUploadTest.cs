@@ -74,13 +74,11 @@ namespace HerokuAppAutomation.Tests.FileUpload
                 // Attempt to upload the large file
                 fileUploadPage!.UploadFile(largeFilePath);
 
-                // Check for Heroku application error
-                isAppErrorPresent = fileUploadPage!.IsApplicationErrorPresent();
-                if (!isAppErrorPresent)
-                {
-                    Logger.Log("KNOWN ISSUE: The application does not handle large file uploads gracefully. Marking the test as inconclusive.", Logger.LogLevel.Warning);
-                    Assert.Inconclusive("KNOWN ISSUE: The application does not handle large file uploads gracefully.");
-                }
+                // Ensure no application error occurred after upload
+                fileUploadPage.EnsureNoApplicationError();
+
+                Logger.Log("KNOWN ISSUE: The application does not handle large file uploads gracefully. Marking the test as inconclusive.", Logger.LogLevel.Warning);
+                Assert.Inconclusive("KNOWN ISSUE: The application does not handle large file uploads gracefully.");
             }
             catch (WebDriverTimeoutException ex)
             {

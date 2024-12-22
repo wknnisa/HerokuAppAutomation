@@ -36,14 +36,11 @@ namespace HerokuAppAutomation.Pages
                 driver.Navigate().Refresh(); // Refresh to ensure the page reloads from a clean state
                 driver!.Navigate().GoToUrl(FileUploadUrl);
 
+                // Ensure no application error iframe is present after navigation
+                EnsureNoApplicationError();
+
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
                 wait.Until(d => d.Url.Contains("upload"));
-
-                if (IsApplicationErrorPresent())
-                {
-                    ScreenshotHelper.TakeScreenshot(driver, "ApplicationErrorDetected.png");
-                    throw new Exception("Navigation failed due to an application error.");
-                }
 
                 // Wait for file upload input to be visible
                 wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
@@ -69,6 +66,9 @@ namespace HerokuAppAutomation.Pages
             {
                 try
                 {
+                    // Check for application error before proceeding.
+                    EnsureNoApplicationError() ;
+
                     // Interact with the file input
                     var fileInput = driver.FindElement(fileUploadInput);
                     fileInput.SendKeys(filePath);
@@ -79,20 +79,21 @@ namespace HerokuAppAutomation.Pages
 
                     Logger.Log("File upload initiated successfully.");
 
-                    if (IsApplicationErrorPresent())
-                    {
-                        ScreenshotHelper.TakeScreenshot(driver, "UploadError.png");
-                        throw new Exception("Application error detected during file upload.");
-                    }
+                    // Ensure no application error occurred after initiating the upload.
+                    EnsureNoApplicationError();
 
-                    return;
+                    return; // Exit method if successful.
                 }
 
                 catch (Exception ex)
                 {
                     retryCount++;
                     Logger.Log($"Retrying file upload ({retryCount}/{maxRetries}): {ex.Message}", Logger.LogLevel.Warning);
-                    if (retryCount == maxRetries) throw;
+                    if (retryCount == maxRetries)
+                    {
+                        ScreenshotHelper.TakeScreenshot(driver, "UploadError.png");
+                        throw;
+                    }
                 }
             }
         }
@@ -144,9 +145,15 @@ namespace HerokuAppAutomation.Pages
         }
 
         public void EnsureNoApplicationError()
-        { 
+        {
+            // Check if the application error iframe is present
             if (driver.FindElements(By.CssSelector("iframe[src*='application-error.html']")).Any())
             {
+                // Capture a screenshot if application error iframe is found
+                ScreenshotHelper.TakeScreenshot(driver, "ApplicationErrorDetected.png");
+
+                // Throw an exception to stop further test execution, indicating an application error
+                throw new Exception("Application error detected. Test cannot proceed");
             }
         }
     }
