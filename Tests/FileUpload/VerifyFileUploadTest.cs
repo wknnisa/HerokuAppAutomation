@@ -65,7 +65,6 @@ namespace HerokuAppAutomation.Tests.FileUpload
             this.browserType = browserType;
 
             string largeFilePath = Path.Combine(FileDirectory, LargeFileName);
-            bool isAppErrorPresent = false;
 
             try
             {
