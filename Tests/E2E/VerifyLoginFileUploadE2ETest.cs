@@ -1,10 +1,12 @@
 ﻿using FileGeneratorLibrary.Utilities;
 using HerokuAppAutomation.Base;
-using HerokuAppAutomation.Pages;
+using HerokuAppAutomation.Pages; // LoginPage and FileUploadPage classes
+using HerokuAppAutomation.Utilities;
 using NUnit.Framework;
 
 namespace HerokuAppAutomation.Tests.E2E
 {
+    [TestFixture]
     public class VerifyLoginFileUploadE2ETest : BaseTest
     {
         private LoginPage? loginPage;
@@ -40,6 +42,7 @@ namespace HerokuAppAutomation.Tests.E2E
                 Directory.CreateDirectory(FileDirectory);
             }
 
+            // Generate a valid file for upload
             FileGenerator.CreateFile(FileDirectory, ValidFileName, ValidFileSize);
         }
 
@@ -53,11 +56,29 @@ namespace HerokuAppAutomation.Tests.E2E
 
             try
             {
+                // Step 1: Login
                 loginPage!.NavigateToLogin();
                 loginPage.Login("tomsmith", "SuperSecretPassword!");
                 Assert.That(driver!.Url, Is.EqualTo(SecureUrl), "Login was not successful.");
 
+                // Step 2: Navigate to File Upload page
                 fileUploadPage!.NavigateToFileUpload();
+
+                // Step 3: Upload a valid file
+                string validFilePath = Path.Combine(FileDirectory, ValidFileName);
+                fileUploadPage.UploadFile(validFilePath);
+
+                // Step 4: Verify the uploaded file name
+                string uploadedFileName = fileUploadPage.GetUploadedFileName();
+                Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name does not match.");
+
+                Logger.Log("E2E Login and File Upload test passed successfully.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Test failed with exception: {ex.Message}", Logger.LogLevel.Error);
+                ScreenshotHelper.TakeScreenshot(driver!, "E2ETestError.png");
+                Assert.Fail($"E2E test failed: {ex.Message}");
             }
         }
     }
