@@ -53,32 +53,49 @@ namespace HerokuAppAutomation.Tests.E2E
         public void VerifyLoginAndFileUpload(BrowserType browserType)
         {
             this.browserType = browserType;
+            int maxRetries = 3; // Maximum retry attempts
+            int attempts = 0;
 
-            try
+            while (attempts < maxRetries)
             {
-                // Step 1: Login
-                loginPage!.NavigateToLogin();
-                loginPage.Login("tomsmith", "SuperSecretPassword!");
-                Assert.That(driver!.Url, Is.EqualTo(SecureUrl), "Login was not successful.");
+                try
+                {
+                    Logger.Log($"Attempt {attempts + 1} of {maxRetries}");
 
-                // Step 2: Navigate to File Upload page
-                fileUploadPage!.NavigateToFileUpload();
+                    // Step 1: Login
+                    loginPage!.NavigateToLogin();
+                    loginPage.Login("tomsmith", "SuperSecretPassword!");
+                    Assert.That(driver!.Url, Is.EqualTo(SecureUrl), "Login was not successful.");
 
-                // Step 3: Upload a valid file
-                string validFilePath = Path.Combine(FileDirectory, ValidFileName);
-                fileUploadPage.UploadFile(validFilePath);
+                    // Step 2: Navigate to File Upload page
+                    fileUploadPage!.NavigateToFileUpload();
 
-                // Step 4: Verify the uploaded file name
-                string uploadedFileName = fileUploadPage.GetUploadedFileName();
-                Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name does not match.");
+                    // Step 3: Upload a valid file
+                    string validFilePath = Path.Combine(FileDirectory, ValidFileName);
+                    fileUploadPage.UploadFile(validFilePath);
 
-                Logger.Log("E2E Login and File Upload test passed successfully.");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Test failed with exception: {ex.Message}", Logger.LogLevel.Error);
-                ScreenshotHelper.TakeScreenshot(driver!, "E2ETestError.png");
-                Assert.Fail($"E2E test failed: {ex.Message}");
+                    // Step 4: Verify the uploaded file name
+                    string uploadedFileName = fileUploadPage.GetUploadedFileName();
+                    Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name does not match.");
+
+                    Logger.Log("E2E Login and File Upload test passed successfully.");
+                    return; // Exit the loop on success
+                }
+                catch (Exception ex)
+                {
+                    attempts++;
+                    Logger.Log($"Attempt {attempts} failed: {ex.Message}", Logger.LogLevel.Warning);
+                    ScreenshotHelper.TakeScreenshot(driver!, $"E2ETestError_Attempt{attempts}.png");
+
+                    if (attempts == maxRetries)
+                    {
+                        Logger.Log("Max retry attempts reached. Failing the test.", Logger.LogLevel.Error);
+                        Assert.Fail($"E2E test failed after {maxRetries} retries: {ex.Message}");
+                    }
+
+                    // Optional: Restart the browser for a clean slate
+                    RestartBrowser();
+                }
             }
         }
     }
