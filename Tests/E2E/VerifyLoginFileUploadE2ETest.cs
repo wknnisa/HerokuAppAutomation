@@ -17,6 +17,7 @@ namespace HerokuAppAutomation.Tests.E2E
         private const string FileDirectory = @"C:\TestFiles\";
         private const string ValidFileName = "200mb.txt";
         private const int ValidFileSize = 200;
+        private const int MaxRetries = 3; // Retry limit
 
         [SetUp]
         public void TestSetUp()
@@ -53,50 +54,55 @@ namespace HerokuAppAutomation.Tests.E2E
         public void VerifyLoginAndFileUpload(BrowserType browserType)
         {
             this.browserType = browserType;
-            int maxRetries = 3; // Maximum retry attempts
-            int attempts = 0;
 
-            while (attempts < maxRetries)
+            for (int attempt = 1; attempt <= MaxRetries; attempt++)
             {
                 try
                 {
-                    Logger.Log($"Attempt {attempts + 1} of {maxRetries}");
+                    Logger.Log($"Attempt {attempt + 1} of {MaxRetries}");
 
-                    // Step 1: Login
-                    loginPage!.NavigateToLogin();
-                    loginPage.Login("tomsmith", "SuperSecretPassword!");
-                    Assert.That(driver!.Url, Is.EqualTo(SecureUrl), "Login was not successful.");
-
-                    // Step 2: Navigate to File Upload page
-                    fileUploadPage!.NavigateToFileUpload();
-
-                    // Step 3: Upload a valid file
-                    string validFilePath = Path.Combine(FileDirectory, ValidFileName);
-                    fileUploadPage.UploadFile(validFilePath);
-
-                    // Step 4: Verify the uploaded file name
-                    string uploadedFileName = fileUploadPage.GetUploadedFileName();
-                    Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name does not match.");
+                    // Run the core E2E test logic
+                    RunFileUploadTest();
 
                     Logger.Log("E2E Login and File Upload test passed successfully.");
-                    return; // Exit the loop on success
+                    return; // Exit on success
                 }
                 catch (Exception ex)
                 {
-                    attempts++;
-                    Logger.Log($"Attempt {attempts} failed: {ex.Message}", Logger.LogLevel.Warning);
-                    ScreenshotHelper.TakeScreenshot(driver!, $"E2ETestError_Attempt{attempts}.png");
+                    Logger.Log($"Attempt {attempt} failed: {ex.Message}", Logger.LogLevel.Warning);
 
-                    if (attempts == maxRetries)
+                    if (attempt < MaxRetries)
+                    {
+                        Logger.Log("Restarting the browser for a fresh attempt...");
+                        RestartBrowser(); // Ensures clean state before retrying
+                    }
+                    else
                     {
                         Logger.Log("Max retry attempts reached. Failing the test.", Logger.LogLevel.Error);
-                        Assert.Fail($"E2E test failed after {maxRetries} retries: {ex.Message}");
+                        ScreenshotHelper.TakeScreenshot(driver!, $"E2ETestError_Attempt{attempt}.png");
+                        Assert.Fail($"E2E test failed after {MaxRetries} attempts: {ex.Message}");
                     }
-
-                    // Optional: Restart the browser for a clean slate
-                    RestartBrowser();
                 }
             }
+        }
+
+        private void RunFileUploadTest()
+        {
+            // Step 1: Login
+            loginPage!.NavigateToLogin();
+            loginPage.Login("tomsmith", "SuperSecretPassword!");
+            Assert.That(driver!.Url, Is.EqualTo(SecureUrl), "Login was not successful.");
+
+            // Step 2: Navigate to File Upload page
+            fileUploadPage!.NavigateToFileUpload();
+
+            // Step 3: Upload a valid file
+            string validFilePath = Path.Combine(FileDirectory, ValidFileName);
+            fileUploadPage.UploadFile(validFilePath);
+
+            // Step 4: Verify the uploaded file name
+            string uploadedFileName = fileUploadPage.GetUploadedFileName();
+            Assert.That(uploadedFileName, Is.EqualTo(ValidFileName), "Uploaded file name does not match.");
         }
     }
 }
