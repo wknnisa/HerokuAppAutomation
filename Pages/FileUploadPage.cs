@@ -31,25 +31,21 @@ namespace HerokuAppAutomation.Pages
         {
             try 
             {
-                // Clear cookies and refresh the page to ensure a clean session
-                driver.Manage().Cookies.DeleteAllCookies(); // Delete all cookies to start fresh
-                driver.Navigate().Refresh(); // Refresh to ensure the page reloads from a clean state
+                // Navigate directly to the File Upload URL
                 driver!.Navigate().GoToUrl(FileUploadUrl);
 
-                // Ensure no application error iframe is present after navigation
-                EnsureNoApplicationError();
-
+                // Wait for the page to load and ensure the file upload input is ready
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
-                wait.Until(d => d.Url.Contains("upload"));
-
-                // Wait for file upload input to be visible
                 wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
+                wait.Until(ExpectedConditions.ElementToBeClickable(fileUploadInput));
+
+                Logger.Log("Successfully navigated to the File Upload page.");
             }
             catch (WebDriverTimeoutException ex)
             {
-                Logger.Log($"Timeout occurred while navigating: {ex.Message}", Logger.LogLevel.Error);
+                Logger.Log($"Navigation timeout: {ex.Message}", Logger.LogLevel.Error);
                 ScreenshotHelper.TakeScreenshot(driver, "NavigateTimeout.png");
-                throw new Exception($"Timeout during navigation: {ex.Message}");
+                throw new Exception($"Failed to navigate to the File Upload page: {ex.Message}");
             }
         }
 
@@ -66,36 +62,82 @@ namespace HerokuAppAutomation.Pages
             {
                 try
                 {
-                    // Check for application error before proceeding.
+                    // Ensure no application error is present
                     EnsureNoApplicationError() ;
 
-                    // Interact with the file input
-                    var fileInput = driver.FindElement(fileUploadInput);
+                    // Locate the file input and interact with it
+                    var fileInput = WaitForElementToBeClickable(fileUploadInput);
                     fileInput.SendKeys(filePath);
 
-                    // Click the upload button
-                    var uploadButtonElement = driver.FindElement(uploadButton);
+                    // Locate the upload button and click it
+                    var uploadButtonElement = WaitForElementToBeClickable(uploadButton);
                     uploadButtonElement.Click();
 
                     Logger.Log("File upload initiated successfully.");
 
-                    // Ensure no application error occurred after initiating the upload.
+                    // Verify no application error occurred after clicking upload
                     EnsureNoApplicationError();
 
-                    return; // Exit method if successful.
+                    return; // Exit the loop if successful.
+                }
+
+                catch(StaleElementReferenceException ex)
+                {
+                    retryCount++;
+                    Logger.Log($"Stale element encountered. Retrying upload ({retryCount}/{maxRetries}): {ex.Message}", Logger.LogLevel.Warning);
+
+                    // Refresh page to ensure elements are reset
+                    RefreshPage();
+                }
+                catch(WebDriverException ex) when (ex.Message.Contains("disposed object"))
+                {
+                    retryCount++;
+                    Logger.Log($"WebDriver exception: {ex.Message}. Retrying upload ({retryCount}/{maxRetries})", Logger.LogLevel.Warning);
+
+                    // Restart browser to ensure WebDriver is fresh
+                    restartBrowserCallback.Invoke();
                 }
 
                 catch (Exception ex)
                 {
                     retryCount++;
-                    Logger.Log($"Retrying file upload ({retryCount}/{maxRetries}): {ex.Message}", Logger.LogLevel.Warning);
+                    Logger.Log($"Error during upload attempt ({retryCount}/{maxRetries}): {ex.Message}", Logger.LogLevel.Warning);
+
                     if (retryCount == maxRetries)
                     {
                         ScreenshotHelper.TakeScreenshot(driver, "UploadError.png");
                         throw;
                     }
+
+                    // Optional: Refresh page or restart browser for next retry
+                    if (retryCount < maxRetries)
+                    {
+                        RefreshPage();
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Refreshes the current page to reset its state.
+        /// </summary>
+        private void RefreshPage()
+        {
+            driver.Navigate().Refresh();
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+            wait.Until(ExpectedConditions.ElementIsVisible(fileUploadInput));
+            Logger.Log("Page refreshed successfully.");
+        }
+
+        /// <summary>
+        /// Waits for an element to be clickable.
+        /// </summary>
+        /// <param name="locator">The locator of the element to wait for.</param>
+        /// <returns>The clickable IWebElement.</returns>
+        private IWebElement WaitForElementToBeClickable(By locator)
+        {
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(TimeoutInSeconds));
+            return wait.Until(ExpectedConditions.ElementToBeClickable(locator));
         }
 
         /// <summary>
