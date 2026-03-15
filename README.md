@@ -1,6 +1,6 @@
 # HerokuAppAutomation
 
-UI automation testing project built using **C#, Selenium WebDriver, and NUnit** to practice browser automation and Page Object Model design.
+UI automation testing project built using C#, Selenium WebDriver, and NUnit to demonstrate browser automation techniques and Page Object Model design.
 
 The tests target the public demo website:
 
@@ -30,38 +30,39 @@ This helps keep the automation code organized, reusable, and maintainable.
 
 ## Project Structure
 
+```
 HerokuAppAutomation
 │
 ├── Base
-│ └── BaseTest.cs
+│   └── BaseTest.cs
 │
 ├── Pages
-│ ├── LoginPage.cs
-│ ├── AddRemoveElementsPage.cs
-│ └── FileUploadPage.cs
+│   ├── LoginPage.cs
+│   ├── AddRemoveElementsPage.cs
+│   └── FileUploadPage.cs
 │
 ├── Tests
-│ ├── AddRemoveElements
-│ │ └── VerifyAddRemoveElementsTest.cs
-│ ├── E2E
-│ │ ├── VerifyLoginAddRemoveE2ETest.cs
-│ │ └── VerifyLoginFileUploadE2ETest.cs
-│ ├── FileUpload
-│ │ └── VerifyFileUploadTest.cs
-│ ├── HomePage
-│ │ └── VerifyHomePageTitleTest.cs
-│ ├── Login
-│ │ └── VerifyLoginTests.cs
-│ └── BasicFunctionalityTests.cs
+│   ├── AddRemoveElements
+│   │   └── VerifyAddRemoveElementsTest.cs
+│   ├── E2E
+│   │   ├── VerifyLoginAddRemoveE2ETest.cs
+│   │   └── VerifyLoginFileUploadE2ETest.cs
+│   ├── FileUpload
+│   │   └── VerifyFileUploadTest.cs
+│   ├── HomePage
+│   │   └── VerifyHomePageTitleTest.cs
+│   ├── Login
+│   │   └── VerifyLoginTests.cs
+│   └── BasicFunctionalityTests.cs
 │
 ├── Utilities
-│ ├── FileHelper.cs
-│ ├── Logger.cs
-│ └── ScreenshotHelper.cs
-
+│   ├── FileHelper.cs
+│   ├── Logger.cs
+│   └── ScreenshotHelper.cs
+```
 
 - **Pages** – Page Object classes that encapsulate locators and interactions for each web page.
-- **Tests** – NUnit test classes that verify application behaviour.
+- **Tests** – NUnit test classes that verify application behavior.
 - **Utilities** – Shared helper classes such as logging, screenshots, and file helpers.
 - **Base** – Base test setup including browser initialization and cleanup.
 
@@ -107,6 +108,60 @@ It demonstrates:
 
 The automation tests run against the public demo testing website:
 
-https://the-internet.herokuapp.com/
+[The Internet Test Site](https://the-internet.herokuapp.com/)
 
 This site is commonly used for practicing Selenium automation scenarios.
+
+---
+
+## Running the Tests
+
+1. Clone the repository
+
+```
+git clone https://github.com/wknnisa/HerokuAppAutomation.git
+```
+
+2. Open the solution in **Visual Studio 2022**
+
+3. Restore NuGet packages
+
+4. Run tests using **Test Explorer**
+
+Alternatively, run tests using the .NET CLI:
+
+```
+dotnet test
+```
+
+---
+
+## Browser Support
+
+The framework supports running tests on multiple browsers via Selenium WebDriver:
+
+- Google Chrome
+- Microsoft Edge
+- Mozilla Firefox
+
+The browser driver can be configured in `BaseTest.cs`.
+
+---
+
+## Notes
+
+- Tests use **explicit waits** to handle dynamic web elements.
+- Screenshots are captured automatically for debugging when failures occur.
+- The framework follows **Page Object Model (POM)** to keep tests maintainable and scalable.
+
+---
+
+## Test Coverage
+
+The automation suite currently covers:
+
+- Login authentication
+- Dynamic element handling
+- File upload functionality
+- Page navigation and validation
+- End-to-end user flow scenarios
